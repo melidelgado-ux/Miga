@@ -91,6 +91,89 @@ service cloud.firestore {
         && (!('invitationId' in data) || (data.invitationId is string && data.invitationId.size() <= 150))
         && data.createdAt is timestamp && data.updatedAt is timestamp && validImage(data);
     }
+    function validOwnerIngredient(item) {
+      return item is map
+        && item.keys().hasOnly(['id','name','quantity','unit','note'])
+        && item.id is string && item.id.size() > 0 && item.id.size() <= 500
+        && item.name is string && item.name.size() > 0 && item.name.size() <= 2000
+        && item.quantity is string && item.quantity.size() <= 1000
+        && item.unit is string && item.unit.size() <= 1000
+        && (!('note' in item) || (item.note is string && item.note.size() <= 10000));
+    }
+    function validOwnerStep(item) {
+      return item is map
+        && item.keys().hasOnly(['id','title','instruction','tip'])
+        && item.id is string && item.id.size() > 0 && item.id.size() <= 500
+        && item.instruction is string && item.instruction.size() <= 20000
+        && (!('title' in item) || (item.title is string && item.title.size() <= 2000))
+        && (!('tip' in item) || (item.tip is string && item.tip.size() <= 10000));
+    }
+    function validOwnerIngredients(items) {
+      return items is list && items.size() <= 20
+        && (items.size() <= 0 || validOwnerIngredient(items[0]))
+        && (items.size() <= 1 || validOwnerIngredient(items[1]))
+        && (items.size() <= 2 || validOwnerIngredient(items[2]))
+        && (items.size() <= 3 || validOwnerIngredient(items[3]))
+        && (items.size() <= 4 || validOwnerIngredient(items[4]))
+        && (items.size() <= 5 || validOwnerIngredient(items[5]))
+        && (items.size() <= 6 || validOwnerIngredient(items[6]))
+        && (items.size() <= 7 || validOwnerIngredient(items[7]))
+        && (items.size() <= 8 || validOwnerIngredient(items[8]))
+        && (items.size() <= 9 || validOwnerIngredient(items[9]))
+        && (items.size() <= 10 || validOwnerIngredient(items[10]))
+        && (items.size() <= 11 || validOwnerIngredient(items[11]))
+        && (items.size() <= 12 || validOwnerIngredient(items[12]))
+        && (items.size() <= 13 || validOwnerIngredient(items[13]))
+        && (items.size() <= 14 || validOwnerIngredient(items[14]))
+        && (items.size() <= 15 || validOwnerIngredient(items[15]))
+        && (items.size() <= 16 || validOwnerIngredient(items[16]))
+        && (items.size() <= 17 || validOwnerIngredient(items[17]))
+        && (items.size() <= 18 || validOwnerIngredient(items[18]))
+        && (items.size() <= 19 || validOwnerIngredient(items[19]));
+    }
+    function validOwnerSteps(items) {
+      return items is list && items.size() <= 20
+        && (items.size() <= 0 || validOwnerStep(items[0]))
+        && (items.size() <= 1 || validOwnerStep(items[1]))
+        && (items.size() <= 2 || validOwnerStep(items[2]))
+        && (items.size() <= 3 || validOwnerStep(items[3]))
+        && (items.size() <= 4 || validOwnerStep(items[4]))
+        && (items.size() <= 5 || validOwnerStep(items[5]))
+        && (items.size() <= 6 || validOwnerStep(items[6]))
+        && (items.size() <= 7 || validOwnerStep(items[7]))
+        && (items.size() <= 8 || validOwnerStep(items[8]))
+        && (items.size() <= 9 || validOwnerStep(items[9]))
+        && (items.size() <= 10 || validOwnerStep(items[10]))
+        && (items.size() <= 11 || validOwnerStep(items[11]))
+        && (items.size() <= 12 || validOwnerStep(items[12]))
+        && (items.size() <= 13 || validOwnerStep(items[13]))
+        && (items.size() <= 14 || validOwnerStep(items[14]))
+        && (items.size() <= 15 || validOwnerStep(items[15]))
+        && (items.size() <= 16 || validOwnerStep(items[16]))
+        && (items.size() <= 17 || validOwnerStep(items[17]))
+        && (items.size() <= 18 || validOwnerStep(items[18]))
+        && (items.size() <= 19 || validOwnerStep(items[19]));
+    }
+    function validOwnerRecipeUpdate(data) {
+      return data.keys().hasOnly(['title','description','prepMinutes','servings','difficulty','category','author','featured','migaTip','imageUrl','ingredients','steps','origin','senderName','collectionId','invitationId','createdAt','updatedAt'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 500
+        && data.description is string && data.description.size() <= 10000
+        && data.prepMinutes is int && data.prepMinutes >= 0 && data.prepMinutes <= 100000
+        && data.servings is int && data.servings >= 1 && data.servings <= 10000
+        && data.difficulty in ['Fácil','Moderado','Difícil']
+        && data.category is string && data.category.size() <= 200
+        && data.author is string && data.author.size() <= 500
+        && data.featured is bool
+        && (!('migaTip' in data) || (data.migaTip is string && data.migaTip.size() <= 10000))
+        && validOwnerIngredients(data.ingredients)
+        && validOwnerSteps(data.steps)
+        && data.origin in ['own','received']
+        && (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 500))
+        && (!('collectionId' in data) || (data.collectionId is string && data.collectionId.size() <= 150))
+        && (!('invitationId' in data) || (data.invitationId is string && data.invitationId.size() <= 150))
+        && data.createdAt == resource.data.createdAt
+        && data.updatedAt is timestamp && validImage(data);
+    }
     function validCollection(data) {
       return data.keys().hasOnly(['name','description','pastelBg','createdAt','updatedAt'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 80
@@ -121,7 +204,7 @@ service cloud.firestore {
                 && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.recipeId == recipeId
                 && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid)
             ));
-        allow update: if signedInAs(uid) && validRecipe(request.resource.data);
+        allow update: if signedInAs(uid) && validOwnerRecipeUpdate(request.resource.data);
         allow delete: if signedInAs(uid);
       }
       match /collections/{collectionId} {
