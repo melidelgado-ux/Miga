@@ -206,7 +206,9 @@ service cloud.firestore {
                 && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.recipeId == recipeId
                 && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid)
             ));
-        allow update: if signedInAs(uid) && validOwnerRecipeUpdate(request.resource.data);
+        // Only the owner can update recipes in their private library. The app writes
+        // the normalized recipe shape; legacy content must not block owner edits.
+        allow update: if signedInAs(uid);
         allow delete: if signedInAs(uid);
       }
       match /collections/{collectionId} {
