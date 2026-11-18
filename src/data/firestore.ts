@@ -110,6 +110,12 @@ function collectionFromSnapshot(snapshot: QueryDocumentSnapshot): MigaCollection
   };
 }
 
+function imageUrlForStorage(imageUrl: string | undefined): string | undefined {
+  if (!imageUrl || !imageUrl.startsWith('/') || imageUrl.startsWith('//')) return imageUrl;
+  if (typeof window === 'undefined' || window.location.protocol !== 'https:') return imageUrl;
+  return new URL(imageUrl, window.location.origin).toString();
+}
+
 function recipeFields(recipe: Recipe) {
   return {
     title: recipe.title,
@@ -121,7 +127,7 @@ function recipeFields(recipe: Recipe) {
     author: recipe.author ?? '',
     featured: recipe.featured === true,
     migaTip: recipe.migaTip,
-    imageUrl: recipe.imageUrl,
+    imageUrl: imageUrlForStorage(recipe.imageUrl),
     ingredients: recipe.ingredients.map((ingredient) => ({
       id: ingredient.id,
       name: ingredient.name,
