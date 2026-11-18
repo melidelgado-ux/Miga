@@ -39,12 +39,12 @@ Completar el recorrido desde la creación del enlace hasta la recepción visible
 
 1. La dueña abre Inicio y toca el botón “+”.
 2. Selecciona “Pedir receta”.
-3. Miga genera una invitación ligada a la cuenta de la dueña, válida por 30 días y para una receta.
+3. Miga genera una invitación ligada a la cuenta de la dueña, válida por 30 días y reutilizable para varias recetas.
 4. La dueña copia el enlace y lo comparte.
 5. La persona invitada abre el enlace y ve el formulario de receta.
 6. Completa el nombre de la receta y su nombre; los demás datos son opcionales.
 7. Toca “Enviar receta”.
-8. Miga valida el enlace, los campos obligatorios y crea la receta como recibida mientras consume el enlace en la misma operación atómica.
+8. Miga valida que el enlace siga vigente y crea cada receta como recibida sin consumirlo.
 9. Se muestra la confirmación “Receta enviada”.
 10. La receta aparece en “Últimas recetas recibidas” y puede abrirse en detalle.
 
@@ -67,7 +67,7 @@ Completar el recorrido desde la creación del enlace hasta la recepción visible
 - Permite copiarlo.
 - Muestra confirmación al copiar.
 - Permite generar otro enlace.
-- Informa que el enlace vence a los 30 días y solo acepta una receta.
+- Informa que el enlace vence a los 30 días y puede recibir varias recetas.
 
 ### Formulario de invitado
 
@@ -130,9 +130,9 @@ Campos disponibles:
 - La receta se marca con `origin: 'received'`.
 - El nombre del invitado se guarda como autor y remitente.
 - Las recetas, colecciones e invitaciones se guardan en Cloud Firestore bajo el UID de la dueña.
-- Las invitaciones se consumen con una transacción que registra una receta recibida.
+- Las invitaciones permanecen activas durante 30 días; cada envío crea una receta recibida independiente y el enlace puede reutilizarse.
 - Las fotos se comprimen en el navegador y se guardan como JPEG en el documento de Firestore, con límite de 200 KiB.
-- Las reglas de Firestore deben restringir lecturas y escrituras de la biblioteca a su dueña y permitir únicamente el envío transaccional por invitación.
+- Las reglas de Firestore deben restringir lecturas y escrituras de la biblioteca a su dueña y permitir envíos anónimos repetidos solo mediante invitaciones vigentes.
 
 ## 9. Criterios de aceptación
 
@@ -141,6 +141,7 @@ Campos disponibles:
 3. Completar los campos obligatorios y enviar muestra “Receta enviada”.
 4. Después del envío, la receta aparece en “Últimas recetas recibidas” de la cuenta propietaria.
 5. Tocar la receta recibida abre correctamente su pantalla de detalle.
+6. Reutilizar el mismo enlace para enviar otra receta crea un segundo documento y el enlace sigue activo hasta su vencimiento.
 
 ## 10. Riesgos y pendientes
 

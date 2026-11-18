@@ -13,7 +13,8 @@
   `public/assets/aistudio/miga-design-system-design_d8a6008b.md`.
 - **Build/servidor de desarrollo:** Vite y sus plugins están en `vite.config.ts`;
   `DISABLE_HMR` controla HMR/watch. Un plugin copia `src/assets` a `dist/src/assets`
-  porque algunas URLs de imagen son raíz-relativas.
+  porque algunas URLs de imagen son raíz-relativas. `vercel.json` reescribe las rutas de
+  la SPA a `index.html` para soportar deep links.
 - **Integraciones:** Firebase Authentication gestiona el inicio de sesión con Google;
   Cloud Firestore guarda recetas, colecciones e invitaciones por usuario. Las fotos se
   comprimen en el navegador y se almacenan en los documentos de recetas. `firestore.rules`
@@ -24,8 +25,9 @@
 
 - El flujo de invitación se detecta en `src/App.tsx` y presenta
   `src/components/GuestInvitePage.tsx` tras consultar su documento en Firestore.
-- El envío escribe la receta en la biblioteca propietaria y consume la invitación en una
-  transacción. Cada invitación vence a los 30 días y se acepta una sola vez.
+- Cada envío escribe una receta en la biblioteca propietaria. El enlace puede reutilizarse
+  y vence a los 30 días; cada envío crea un documento independiente. Las reglas mantienen
+  compatibilidad con transacciones de versiones anteriores durante su transición.
 - Los datos se guardan bajo `users/{uid}`; las reglas aíslan cada biblioteca
   y permiten el envío anónimo solo con una invitación vigente.
 - Para seguir datos y callbacks, leer `src/App.tsx`, `src/data/mockRecipes.ts` y el

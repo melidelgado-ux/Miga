@@ -207,9 +207,32 @@ export function GuestInvitePage({
           <div className="p-4 rounded-[18px] bg-[#FFF8D6]/80 border border-[#E8E8E8] text-[14px] text-[#2D2D2D]/85 flex items-center justify-center gap-2 max-w-md mx-auto">
             <Heart className="w-4 h-4 text-[#FF4B8A] shrink-0" strokeWidth={2.2} />
             <span>
-              Cada receta compartida suma un recuerdo nuevo en su cocina.
+              El enlace sigue activo por 30 días para compartir más recetas.
             </span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setTitle('');
+              setDescription('');
+              setAuthorName('');
+              setImageUrl(undefined);
+              setPrepMinutes(30);
+              setServings(4);
+              setDifficulty('Fácil');
+              setCategory('');
+              setIngredients([]);
+              setSteps([]);
+              setMigaTip('');
+              setSubmittedSummary(null);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="miga-btn-primary min-h-[52px] px-6 py-3 rounded-[16px] inline-flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-5 h-5" strokeWidth={2.2} />
+            <span>Enviar otra receta</span>
+          </button>
 
         </section>
       </div>

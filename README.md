@@ -61,11 +61,11 @@ La aplicación permite iniciar sesión con una cuenta de Google mediante Firebas
 
 1. Desde Inicio, la persona toca el botón “+”.
 2. Selecciona “Pedir receta”.
-3. Miga crea un enlace de un solo uso que vence en 30 días.
+3. Miga crea un enlace reutilizable que vence en 30 días.
 4. El enlace se copia y se comparte con otra persona.
 5. La persona invitada abre `/invitacion/...` y completa el formulario.
 6. Miga valida el nombre de la receta y el nombre del autor.
-7. Al enviar, una operación atómica crea la receta con origen `received` y consume el enlace.
+7. Al enviar, Miga crea una receta con origen `received`; el enlace sigue activo hasta vencer.
 8. Se muestra “Receta enviada”.
 9. La receta aparece en “Últimas recetas recibidas” y se puede abrir en detalle.
 
@@ -113,7 +113,7 @@ Las recetas, colecciones e invitaciones viven en subcolecciones bajo `users/{uid
 - Google Sign-In está configurado en Firebase Authentication. El dominio de Vercel y localhost están configurados como destinos OAuth.
 - Las reglas están en `firestore.rules` y ya fueron desplegadas en Firebase.
 - Sin configuración de Firebase, el acceso a la biblioteca queda desactivado.
-- Las invitaciones se guardan en Firestore y vencen a los 30 días; las rutas públicas permiten enviar una receta sin crear una cuenta. Solo se puede usar cada enlace una vez.
+- Las invitaciones se guardan en Firestore y vencen a los 30 días; las rutas públicas permiten enviar varias recetas sin crear una cuenta usando el mismo enlace.
 - La generación del enlace depende de la URL pública de la app.
 - Los ingredientes y pasos vacíos se conservan vacíos; no se agregan textos de ejemplo.
 
@@ -212,7 +212,9 @@ npm run preview
 
 ## Rutas y acceso de invitación
 
-La aplicación detecta una invitación en `/invitacion/{ownerUid}/{inviteId}` y valida su estado y vencimiento en Firestore antes de mostrar el formulario.
+La aplicación detecta una invitación en `/invitacion/{ownerUid}/{inviteId}` y valida su existencia y vencimiento en Firestore antes de mostrar el formulario. El mismo enlace puede recibir varias recetas durante sus 30 días de vigencia.
+
+`vercel.json` reescribe las rutas internas a `index.html` para que los enlaces de invitación funcionen al abrirse directamente en Vercel.
 
 Ejemplo:
 
@@ -229,6 +231,7 @@ El nombre de la persona solicitante se carga desde la invitación guardada por l
 3. Completar los campos obligatorios y enviar muestra “Receta enviada”.
 4. La receta enviada aparece en “Últimas recetas recibidas” de la cuenta propietaria.
 5. Tocar la receta recibida abre correctamente su pantalla de detalle.
+6. El mismo enlace permite enviar varias recetas durante sus 30 días de vigencia.
 
 ## Documento funcional
 

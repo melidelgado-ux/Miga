@@ -8,7 +8,6 @@ import {
   onSnapshot,
   orderBy,
   query,
-  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -254,7 +253,6 @@ export async function deleteCollection(
 
 export interface InviteInfo {
   ownerName: string;
-  used: boolean;
   expiresAt: Date;
 }
 
@@ -266,7 +264,6 @@ export async function createRecipeInvite(uid: string, ownerName: string) {
     ownerName: ownerName.slice(0, 80) || 'Miga',
     createdAt: serverTimestamp(),
     expiresAt: Timestamp.fromDate(expiresAt),
-    used: false,
   });
   const origin = window.location.origin;
   return {
@@ -284,7 +281,6 @@ export async function getRecipeInvite(uid: string, inviteId: string): Promise<In
     : new Date(0);
   return {
     ownerName: stringValue(data.ownerName, 'Miga'),
-    used: data.used === true,
     expiresAt,
   };
 }
@@ -297,35 +293,28 @@ export async function submitInvitedRecipe(
   const database = requireDb();
   const inviteRef = doc(database, 'users', ownerUid, 'invitations', inviteId);
   const recipeRef = doc(collection(database, 'users', ownerUid, 'recipes'));
+  const inviteSnapshot = await getDoc(inviteRef);
+  if (!inviteSnapshot.exists()) throw new Error('Este enlace no es válido.');
+  const invite = inviteSnapshot.data();
+  const expiresAt = invite.expiresAt instanceof Timestamp
+    ? invite.expiresAt.toDate().getTime()
+    : 0;
+  if (expiresAt <= Date.now()) {
+    throw new Error('Este enlace venció. Pedile a quien te invitó que genere otro.');
+  }
 
-  await runTransaction(database, async (transaction) => {
-    const inviteSnapshot = await transaction.get(inviteRef);
-    if (!inviteSnapshot.exists()) throw new Error('Este enlace no es válido.');
-    const invite = inviteSnapshot.data();
-    const expiresAt = invite.expiresAt instanceof Timestamp
-      ? invite.expiresAt.toDate().getTime()
-      : 0;
-    if (invite.used === true) throw new Error('Este enlace ya recibió una receta.');
-    if (expiresAt <= Date.now()) throw new Error('Este enlace venció. Pedile a quien te invitó que genere otro.');
-
-    const savedRecipe: Recipe = {
-      ...recipe,
-      id: recipeRef.id,
-      origin: 'received',
-      isExample: false,
-      invitationId: inviteId,
-      createdAt: new Date().toISOString(),
-    };
-    transaction.set(recipeRef, {
-      ...definedFields(recipeFields(savedRecipe) as Record<string, unknown>),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    transaction.update(inviteRef, {
-      used: true,
-      usedAt: serverTimestamp(),
-      recipeId: recipeRef.id,
-    });
+  const savedRecipe: Recipe = {
+    ...recipe,
+    id: recipeRef.id,
+    origin: 'received',
+    isExample: false,
+    invitationId: inviteId,
+    createdAt: new Date().toISOString(),
+  };
+  await setDoc(recipeRef, {
+    ...definedFields(recipeFields(savedRecipe) as Record<string, unknown>),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
 
   return {

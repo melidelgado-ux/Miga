@@ -72,7 +72,7 @@ export default function App() {
     const match = window.location.pathname.match(/^\/invitacion\/([^/]+)\/([^/]+)\/?$/);
     return { active: window.location.pathname.startsWith('/invitacion'), requesterName: '', ownerUid: match?.[1] ?? '', inviteId: match?.[2] ?? '' };
   });
-  const [inviteStatus, setInviteStatus] = useState<'loading' | 'ready' | 'invalid' | 'used' | 'expired'>('loading');
+  const [inviteStatus, setInviteStatus] = useState<'loading' | 'ready' | 'invalid' | 'expired'>('loading');
 
   // Modales auxiliares
   const [isAddChoiceOpen, setIsAddChoiceOpen] = useState(false);
@@ -114,8 +114,7 @@ export default function App() {
       if (cancelled) return;
       if (!invite) { setInviteStatus('invalid'); return; }
       setGuestInvite((current) => ({ ...current, requesterName: invite.ownerName }));
-      if (invite.used) setInviteStatus('used');
-      else if (invite.expiresAt.getTime() <= Date.now()) setInviteStatus('expired');
+      if (invite.expiresAt.getTime() <= Date.now()) setInviteStatus('expired');
       else setInviteStatus('ready');
     }).catch(() => { if (!cancelled) setInviteStatus('invalid'); });
     return () => { cancelled = true; };
@@ -408,7 +407,7 @@ export default function App() {
             }}
             onNotify={(message, type = 'success') => setFeedback({ message, type })}
           /> : <section className="max-w-xl mx-auto p-8 my-10 rounded-[24px] bg-[#FFF8D6] border border-[#F4EBC2] text-center space-y-3">
-            <h1 className="font-display text-[24px] font-bold">{inviteStatus === 'loading' ? 'Revisando el enlace…' : inviteStatus === 'used' ? 'Este enlace ya se usó' : inviteStatus === 'expired' ? 'Este enlace venció' : 'No encontramos este enlace'}</h1>
+            <h1 className="font-display text-[24px] font-bold">{inviteStatus === 'loading' ? 'Revisando el enlace…' : inviteStatus === 'expired' ? 'Este enlace venció' : 'No encontramos este enlace'}</h1>
             <p className="text-[#747474]">{inviteStatus === 'loading' ? 'Un momento, por favor.' : 'Pedile a quien te invitó que genere un enlace nuevo.'}</p>
           </section>
         ) : isCreatingRecipe ? (

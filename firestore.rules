@@ -108,10 +108,19 @@ service cloud.firestore {
             && request.resource.data.origin == 'received'
             && request.resource.data.featured == false
             && request.resource.data.invitationId is string
+            && request.resource.data.invitationId.size() > 0
             && request.resource.data.senderName == request.resource.data.author
-            && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.used == true
-            && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.recipeId == recipeId
-            && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid);
+            && (
+              // Nuevo flujo: cada envío crea una receta y deja el enlace activo.
+              (exists(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId))
+                && get(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid
+                && get(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.expiresAt is timestamp
+                && get(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.expiresAt > request.time)
+              // Compatibilidad: permite terminar envíos atómicos iniciados por una versión anterior.
+              || (getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.used == true
+                && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.recipeId == recipeId
+                && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid)
+            ));
         allow update: if signedInAs(uid) && validRecipe(request.resource.data);
         allow delete: if signedInAs(uid);
       }
@@ -131,9 +140,11 @@ service cloud.firestore {
           && request.resource.data.expiresAt is timestamp
           && request.resource.data.expiresAt > request.time
           && request.resource.data.expiresAt <= request.time + duration.value(30, 'd')
-          && request.resource.data.used == false;
+          && (!('used' in request.resource.data) || request.resource.data.used == false);
+        // Solo se acepta la transición heredada de una receta atómica en versiones anteriores.
         allow update: if canSubmitAsGuest(uid)
-          && resource.data.ownerUid == uid && resource.data.used == false
+          && resource.data.ownerUid == uid
+          && (!('used' in resource.data) || resource.data.used == false)
           && resource.data.expiresAt > request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used','usedAt','recipeId'])
           && request.resource.data.used == true

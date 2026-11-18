@@ -166,7 +166,7 @@ export function AddChoiceModal({
               </div>
 
               <p className="text-[13px] leading-[1.5] text-[#747474]">
-                El enlace acepta una receta, vence en 30 días y solo se puede usar una vez.
+                El enlace puede recibir varias recetas y vence en 30 días.
               </p>
 
               <input
