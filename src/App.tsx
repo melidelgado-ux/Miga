@@ -129,7 +129,7 @@ export default function App() {
   }, [authenticatedUser]);
 
   useEffect(() => {
-    if (!feedback) return;
+    if (!feedback || feedback.type === 'error') return;
     const timer = window.setTimeout(() => {
       setFeedback(null);
     }, 3000);
@@ -180,10 +180,12 @@ export default function App() {
       const code =
         typeof error === 'object' && error !== null && 'code' in error &&
         typeof error.code === 'string'
-          ? ` (${error.code})`
+          ? error.code
           : '';
       setFeedback({
-        message: `No se pudo guardar la receta. Revisá la conexión e intentá de nuevo.${code}`,
+        message: code
+          ? `Error de Firebase: ${code}. No se pudo guardar la receta.`
+          : 'No se pudo guardar la receta. Revisá la conexión e intentá de nuevo.',
         type: 'error',
       });
       return;
@@ -363,7 +365,7 @@ export default function App() {
           <aside
             role="status"
             aria-live="polite"
-            className={`fixed top-[62px] left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] sm:max-w-sm px-3.5 py-2 rounded-[16px] flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)] border ${
+            className={`fixed top-[62px] left-1/2 -translate-x-1/2 z-[60] w-max max-w-[90vw] sm:max-w-md px-3.5 py-2 rounded-[16px] flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.12)] border ${
               feedback.type === 'error'
                 ? 'bg-[#FFF8D6] border-[#FFA500]/50'
                 : 'bg-[#D4F8E8] border-[#52C41A]/35'
@@ -380,7 +382,7 @@ export default function App() {
                 strokeWidth={2.2}
               />
             )}
-            <p className="text-[12px] font-medium text-[#2D2D2D] truncate">
+            <p className="min-w-0 flex-1 text-[12px] font-medium text-[#2D2D2D] whitespace-normal break-words">
               {feedback.message}
             </p>
             <button
