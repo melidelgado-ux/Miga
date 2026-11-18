@@ -154,7 +154,7 @@ service cloud.firestore {
         && (items.size() <= 18 || validOwnerStep(items[18]))
         && (items.size() <= 19 || validOwnerStep(items[19]));
     }
-    function validOwnerRecipeUpdate(data) {
+    function validRecipePayload(data) {
       return data.keys().hasOnly(['title','description','prepMinutes','servings','difficulty','category','author','featured','migaTip','imageUrl','ingredients','steps','origin','senderName','collectionId','invitationId','createdAt','updatedAt'])
         && data.title is string && data.title.size() > 0 && data.title.size() <= 500
         && data.description is string && data.description.size() <= 10000
@@ -171,9 +171,10 @@ service cloud.firestore {
         && (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 500))
         && (!('collectionId' in data) || (data.collectionId is string && data.collectionId.size() <= 150))
         && (!('invitationId' in data) || (data.invitationId is string && data.invitationId.size() <= 150))
-        && data.createdAt is timestamp
-        && (!(resource.data.createdAt is timestamp) || data.createdAt == resource.data.createdAt)
-        && data.updatedAt is timestamp && validImage(data);
+        && data.createdAt is timestamp && data.updatedAt is timestamp && validImage(data);
+    }
+    function validOwnerRecipeUpdate(data) {
+      return validRecipePayload(data);
     }
     function validCollection(data) {
       return data.keys().hasOnly(['name','description','pastelBg','createdAt','updatedAt'])
@@ -187,8 +188,8 @@ service cloud.firestore {
       allow read, write: if false;
       match /recipes/{recipeId} {
         allow read: if signedInAs(uid);
-        allow create: if (signedInAs(uid) && validRecipe(request.resource.data))
-          || (canSubmitAsGuest(uid) && validRecipe(request.resource.data)
+        allow create: if (signedInAs(uid) && validRecipePayload(request.resource.data))
+          || (canSubmitAsGuest(uid) && validRecipePayload(request.resource.data)
             && request.resource.data.origin == 'received'
             && request.resource.data.featured == false
             && request.resource.data.invitationId is string
