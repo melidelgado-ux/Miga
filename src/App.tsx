@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import {
   AlertCircle,
   ArrowLeft,
@@ -16,8 +17,6 @@ import {
 } from 'lucide-react';
 import {
   Collection,
-  INITIAL_COLLECTIONS,
-  INITIAL_RECIPES,
   Recipe,
 } from './data/mockRecipes';
 import {
@@ -33,17 +32,27 @@ import { ProfileModal } from './components/ProfileModal';
 import { CreateCollectionModal } from './components/CreateCollectionModal';
 import { AllRecipesPage } from './components/AllRecipesPage';
 import { GuestInvitePage } from './components/GuestInvitePage';
+import { LoginPage } from './components/LoginPage';
+import { auth as firebaseAuth, signOutFromMiga } from './firebase';
+import {
+  createRecipeInvite, deleteCollection, deleteRecipe, getRecipeInvite,
+  saveCollection, saveRecipe, setRecipeCollection, submitInvitedRecipe,
+  subscribeUserCollections, subscribeUserRecipes,
+} from './data/firestore';
 
 type MainTab = 'inicio' | 'recetas' | 'colecciones';
 
 export default function App() {
+  const [authenticatedUser, setAuthenticatedUser] = useState<FirebaseUser | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const lastAuthUid = useRef<string | null | undefined>(undefined);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
     return window.localStorage.getItem('miga-theme') === 'dark' ? 'dark' : 'light';
   });
   const [activeTab, setActiveTab] = useState<MainTab>('inicio');
-  const [recipes, setRecipes] = useState<Recipe[]>(INITIAL_RECIPES);
-  const [collections, setCollections] = useState<Collection[]>(INITIAL_COLLECTIONS);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
 
   // Vistas de página completa
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
@@ -53,17 +62,16 @@ export default function App() {
   const [guestInvite, setGuestInvite] = useState<{
     active: boolean;
     requesterName: string;
-    isPreview: boolean;
+    ownerUid: string;
+    inviteId: string;
   }>(() => {
     if (typeof window === 'undefined') {
-      return { active: false, requesterName: 'Sofi', isPreview: false };
+      return { active: false, requesterName: '', ownerUid: '', inviteId: '' };
     }
-    const params = new URLSearchParams(window.location.search);
-    const isInviteRoute =
-      window.location.pathname.startsWith('/invitacion') || params.has('invitacion');
-    const requester = params.get('de')?.trim() || 'Sofi';
-    return { active: isInviteRoute, requesterName: requester, isPreview: false };
+    const match = window.location.pathname.match(/^\/invitacion\/([^/]+)\/([^/]+)\/?$/);
+    return { active: window.location.pathname.startsWith('/invitacion'), requesterName: '', ownerUid: match?.[1] ?? '', inviteId: match?.[2] ?? '' };
   });
+  const [inviteStatus, setInviteStatus] = useState<'loading' | 'ready' | 'invalid' | 'used' | 'expired'>('loading');
 
   // Modales auxiliares
   const [isAddChoiceOpen, setIsAddChoiceOpen] = useState(false);
@@ -77,6 +85,48 @@ export default function App() {
     message: string;
     type: 'success' | 'error';
   } | null>(null);
+
+  useEffect(() => {
+    if (!firebaseAuth) {
+      setIsAuthReady(true);
+      return;
+    }
+
+    return onAuthStateChanged(firebaseAuth, (user) => {
+      const nextUid = user?.uid ?? null;
+      if (lastAuthUid.current !== nextUid) {
+        setRecipes([]);
+        setCollections([]);
+        setSelectedCollectionId(null);
+        setSelectedRecipeId(null);
+      }
+      lastAuthUid.current = nextUid;
+      setAuthenticatedUser(user);
+      setIsAuthReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!guestInvite.active) return;
+    let cancelled = false;
+    getRecipeInvite(guestInvite.ownerUid, guestInvite.inviteId).then((invite) => {
+      if (cancelled) return;
+      if (!invite) { setInviteStatus('invalid'); return; }
+      setGuestInvite((current) => ({ ...current, requesterName: invite.ownerName }));
+      if (invite.used) setInviteStatus('used');
+      else if (invite.expiresAt.getTime() <= Date.now()) setInviteStatus('expired');
+      else setInviteStatus('ready');
+    }).catch(() => { if (!cancelled) setInviteStatus('invalid'); });
+    return () => { cancelled = true; };
+  }, [guestInvite.active, guestInvite.ownerUid, guestInvite.inviteId]);
+
+  useEffect(() => {
+    if (!authenticatedUser) return;
+    const onError = () => setFeedback({ message: 'No pudimos cargar tus datos. Revisá tu conexión y las reglas de Firestore.', type: 'error' });
+    const stopRecipes = subscribeUserRecipes(authenticatedUser.uid, setRecipes, onError);
+    const stopCollections = subscribeUserCollections(authenticatedUser.uid, setCollections, onError);
+    return () => { stopRecipes(); stopCollections(); };
+  }, [authenticatedUser]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -121,14 +171,11 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSaveRecipe = (savedRecipe: Recipe) => {
+  const handleSaveRecipe = async (savedRecipe: Recipe) => {
     const isEditing = Boolean(editingRecipe);
-    setRecipes((prev) => {
-      const exists = prev.some((r) => r.id === savedRecipe.id);
-      return exists
-        ? prev.map((r) => (r.id === savedRecipe.id ? savedRecipe : r))
-        : [savedRecipe, ...prev];
-    });
+    if (!authenticatedUser) return;
+    try { await saveRecipe(authenticatedUser.uid, savedRecipe, !isEditing); }
+    catch { setFeedback({ message: 'No se pudo guardar la receta. Revisá la conexión e intentá de nuevo.', type: 'error' }); return; }
     setFeedback({
       message: isEditing
         ? `«${savedRecipe.title}» actualizada.`
@@ -141,12 +188,40 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleAssignCollection = (recipeId: string, collectionId: string) => {
-    setRecipes((prev) =>
-      prev.map((r) =>
-        r.id === recipeId ? { ...r, collectionId: collectionId || undefined } : r
-      )
-    );
+  const handleDeleteRecipe = async (recipeId: string) => {
+    const deletedRecipe = recipes.find((recipe) => recipe.id === recipeId);
+    if (!authenticatedUser) return;
+    try { await deleteRecipe(authenticatedUser.uid, recipeId); }
+    catch { setFeedback({ message: 'No se pudo eliminar la receta.', type: 'error' }); return; }
+    setIsCreatingRecipe(false);
+    setEditingRecipe(null);
+    setSelectedRecipeId(null);
+    setFeedback({
+      message: deletedRecipe
+        ? `«${deletedRecipe.title}» eliminada del recetario.`
+        : 'Receta eliminada del recetario.',
+      type: 'success',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSignOut = async () => {
+    if (!firebaseAuth) return;
+    try {
+      await signOutFromMiga();
+      setIsProfileOpen(false);
+    } catch {
+      setFeedback({
+        message: 'No pudimos cerrar la sesión. Intentá otra vez.',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleAssignCollection = async (recipeId: string, collectionId: string) => {
+    if (!authenticatedUser) return;
+    try { await setRecipeCollection(authenticatedUser.uid, recipeId, collectionId); }
+    catch { setFeedback({ message: 'No se pudo actualizar la colección.', type: 'error' }); return; }
     const colName = collections.find((c) => c.id === collectionId)?.name;
     setFeedback({
       message: colName
@@ -156,36 +231,31 @@ export default function App() {
     });
   };
 
-  const handleCreateCollection = (newCol: Collection) => {
-    setCollections((prev) => [...prev, newCol]);
+  const handleCreateCollection = async (newCol: Collection) => {
+    if (!authenticatedUser) return;
+    try { await saveCollection(authenticatedUser.uid, newCol, true); }
+    catch { setFeedback({ message: 'No se pudo crear la colección.', type: 'error' }); return; }
     setFeedback({
       message: `Colección «${newCol.name}» creada.`,
       type: 'success',
     });
   };
 
-  const handleUpdateCollection = (updatedCollection: Collection) => {
-    setCollections((prev) =>
-      prev.map((collection) =>
-        collection.id === updatedCollection.id ? updatedCollection : collection
-      )
-    );
+  const handleUpdateCollection = async (updatedCollection: Collection) => {
+    if (!authenticatedUser) return;
+    try { await saveCollection(authenticatedUser.uid, updatedCollection, false); }
+    catch { setFeedback({ message: 'No se pudo actualizar la colección.', type: 'error' }); return; }
     setFeedback({
       message: `Colección «${updatedCollection.name}» actualizada.`,
       type: 'success',
     });
   };
 
-  const handleDeleteCollection = (collectionId: string) => {
+  const handleDeleteCollection = async (collectionId: string) => {
     const deletedCollection = collections.find((collection) => collection.id === collectionId);
-    setCollections((prev) => prev.filter((collection) => collection.id !== collectionId));
-    setRecipes((prev) =>
-      prev.map((recipe) =>
-        recipe.collectionId === collectionId
-          ? { ...recipe, collectionId: undefined }
-          : recipe
-      )
-    );
+    if (!authenticatedUser) return;
+    try { await deleteCollection(authenticatedUser.uid, collectionId, recipes.filter((r) => r.collectionId === collectionId).map((r) => r.id)); }
+    catch { setFeedback({ message: 'No se pudo eliminar la colección.', type: 'error' }); return; }
     if (selectedCollectionId === collectionId) setSelectedCollectionId(null);
     setFeedback({
       message: deletedCollection
@@ -195,6 +265,18 @@ export default function App() {
     });
   };
 
+  const isGuestInviteRoute = guestInvite.active;
+  if (isGuestInviteRoute) {
+    // El formulario de invitación sigue disponible para personas sin cuenta.
+  } else if (!isAuthReady || !authenticatedUser) {
+    return <LoginPage isAuthReady={isAuthReady} />;
+  }
+
+  const userFirstName =
+    authenticatedUser?.displayName?.trim().split(/\s+/)[0] ||
+    authenticatedUser?.email?.split('@')[0] ||
+    'Miga';
+
   return (
     <div data-theme={theme} className="min-h-screen bg-[#FFFFFF] text-[#2D2D2D] flex flex-col">
       {/* Header limpio y compacto (<= 52px) */}
@@ -203,7 +285,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => {
-              if (guestInvite.active && !guestInvite.isPreview) return;
+              if (guestInvite.active) return;
               setGuestInvite((prev) => ({ ...prev, active: false }));
               setIsCreatingRecipe(false);
               setEditingRecipe(null);
@@ -212,7 +294,7 @@ export default function App() {
               setActiveTab('inicio');
             }}
             className={`flex items-center gap-2.5 ${
-              guestInvite.active && !guestInvite.isPreview
+              guestInvite.active
                 ? 'cursor-default'
                 : 'cursor-pointer'
             }`}
@@ -248,7 +330,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsProfileOpen(true)}
-                aria-label="Abrir perfil de Sofi"
+                aria-label={`Abrir perfil de ${userFirstName}`}
                 className="min-h-[44px] min-w-[44px] rounded-full bg-[#FFD6C9] border-2 border-[#FF6B4A]/60 text-[#2D2D2D] flex items-center justify-center hover:border-[#FF6B4A] transition-colors cursor-pointer"
               >
                 <User className="w-5 h-5" strokeWidth={2} />
@@ -302,26 +384,20 @@ export default function App() {
 
         {guestInvite.active ? (
           /* Formulario de invitado que recibió el link para compartir su receta */
-          <GuestInvitePage
+          inviteStatus === 'ready' ? <GuestInvitePage
             requesterName={guestInvite.requesterName}
-            onSubmitRecipe={(sharedRecipe) => {
-              setRecipes((prev) => [sharedRecipe, ...prev]);
+            onSubmitRecipe={async (sharedRecipe) => {
+              await submitInvitedRecipe(guestInvite.ownerUid, guestInvite.inviteId, sharedRecipe);
               setFeedback({
                 message: `Receta «${sharedRecipe.title}» enviada a ${guestInvite.requesterName}.`,
                 type: 'success',
               });
             }}
-            onExitPreview={
-              guestInvite.isPreview
-                ? () => {
-                    setGuestInvite((prev) => ({ ...prev, active: false }));
-                    setActiveTab('inicio');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }
-                : undefined
-            }
             onNotify={(message, type = 'success') => setFeedback({ message, type })}
-          />
+          /> : <section className="max-w-xl mx-auto p-8 my-10 rounded-[24px] bg-[#FFF8D6] border border-[#F4EBC2] text-center space-y-3">
+            <h1 className="font-display text-[24px] font-bold">{inviteStatus === 'loading' ? 'Revisando el enlace…' : inviteStatus === 'used' ? 'Este enlace ya se usó' : inviteStatus === 'expired' ? 'Este enlace venció' : 'No encontramos este enlace'}</h1>
+            <p className="text-[#747474]">{inviteStatus === 'loading' ? 'Un momento, por favor.' : 'Pedile a quien te invitó que genere un enlace nuevo.'}</p>
+          </section>
         ) : isCreatingRecipe ? (
           /* Página completa de Creación / Edición de Receta */
           <CreateRecipePage
@@ -334,6 +410,7 @@ export default function App() {
               if (prevEditedId) setSelectedRecipeId(prevEditedId);
             }}
             onSave={handleSaveRecipe}
+            onDelete={handleDeleteRecipe}
             onNotify={(message, type = 'success') => setFeedback({ message, type })}
           />
         ) : selectedRecipe ? (
@@ -362,7 +439,7 @@ export default function App() {
               aria-label="Bienvenida y creación rápida de receta"
               className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch"
             >
-              <div className="lg:col-span-7 min-h-[248px] p-6 sm:p-8 rounded-[28px] bg-[#FFF8D6] border border-[#F4EBC2] shadow-[0_4px_12px_rgba(0,0,0,0.06)] flex items-center justify-between gap-4 overflow-hidden relative">
+              <div className="lg:col-span-12 min-h-[248px] p-6 sm:p-8 rounded-[28px] bg-[#FFF8D6] border border-[#F4EBC2] shadow-[0_4px_12px_rgba(0,0,0,0.06)] flex items-center justify-between gap-4 overflow-hidden relative">
                 <div className="space-y-3 relative z-10">
                   <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFFFFF]/75 text-[12px] font-semibold tracking-wide text-[#747474]">
                     <span className="w-2 h-2 rounded-full bg-[#FF6B4A]" />
@@ -372,7 +449,7 @@ export default function App() {
                     className="font-display text-[32px] sm:text-[40px] font-bold leading-[1.12] tracking-tight text-[#2D2D2D]"
                     style={{ textWrap: 'balance' }}
                   >
-                    ¡Hola, Sofi!
+                    ¡Hola, {userFirstName}!
                   </h1>
                   <p className="text-[15px] sm:text-[16px] leading-[1.6] text-[#2D2D2D]/80 max-w-md">
                     Un lugar para tus clásicos de siempre y esos platos ricos que te comparten.
@@ -882,17 +959,10 @@ export default function App() {
         isOpen={isAddChoiceOpen}
         onClose={() => setIsAddChoiceOpen(false)}
         onChooseCreateOwn={() => openCreateRecipePage(null)}
-        onPreviewInviteLink={() => {
-          setIsCreatingRecipe(false);
-          setEditingRecipe(null);
-          setSelectedRecipeId(null);
-          setSelectedCollectionId(null);
-          setGuestInvite({
-            active: true,
-            requesterName: 'Sofi',
-            isPreview: true,
-          });
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+        onCreateInvite={async () => {
+          if (!authenticatedUser) throw new Error('Iniciá sesión para crear un enlace.');
+          const invite = await createRecipeInvite(authenticatedUser.uid, authenticatedUser.displayName ?? authenticatedUser.email ?? 'Miga');
+          return invite.link;
         }}
         onNotify={(message, type = 'success') => setFeedback({ message, type })}
       />
@@ -924,6 +994,10 @@ export default function App() {
         ownCount={recipes.filter((r) => r.origin === 'own').length}
         receivedCount={recipes.filter((r) => r.origin === 'received').length}
         collectionsCount={collections.length}
+        displayName={authenticatedUser?.displayName?.trim() || userFirstName}
+        email={authenticatedUser?.email ?? null}
+        photoURL={authenticatedUser?.photoURL ?? null}
+        onSignOut={handleSignOut}
         theme={theme}
         onThemeChange={(nextTheme) => {
           setTheme(nextTheme);

@@ -51,17 +51,21 @@ El nombre de la receta y el nombre del autor son obligatorios. Descripción, fot
 
 ### Confirmación de envío
 
-Después de enviar una receta, se muestra una confirmación con el nombre de la receta y de la persona que la compartió. En la vista de prueba también se puede volver a la biblioteca.
+Después de enviar una receta, se muestra una confirmación con el nombre de la receta y de la persona que la compartió.
+
+### Inicio de sesión
+
+La aplicación permite iniciar sesión con una cuenta de Google mediante Firebase Authentication. Las rutas de invitación siguen disponibles para personas invitadas sin cuenta. Las recetas y colecciones se sincronizan por cuenta mediante Cloud Firestore.
 
 ## Flujo principal: recibir una receta
 
 1. Desde Inicio, la persona toca el botón “+”.
 2. Selecciona “Pedir receta”.
-3. Miga genera un enlace privado de invitación.
+3. Miga crea un enlace de un solo uso que vence en 30 días.
 4. El enlace se copia y se comparte con otra persona.
 5. La persona invitada abre `/invitacion/...` y completa el formulario.
 6. Miga valida el nombre de la receta y el nombre del autor.
-7. Al enviar, crea una receta con origen `received`.
+7. Al enviar, una operación atómica crea la receta con origen `received` y consume el enlace.
 8. Se muestra “Receta enviada”.
 9. La receta aparece en “Últimas recetas recibidas” y se puede abrir en detalle.
 
@@ -101,16 +105,17 @@ Una receta incluye, entre otros datos:
 - Colección opcional.
 - Fecha de creación.
 
-La información se mantiene en el estado local de React mientras la aplicación está abierta. Al recargar o cerrar la aplicación, los cambios no se conservan.
+Las recetas, colecciones e invitaciones viven en subcolecciones bajo `users/{uid}`. Las fotos se convierten a JPEG, se reducen a un máximo de 1280 px y se comprimen a 200 KiB como máximo antes de guardarse dentro del documento de Firestore.
 
 ## Límites actuales
 
-- No hay backend ni base de datos.
-- Los enlaces de invitación son demostrativos y no sincronizan datos entre dispositivos.
-- No hay cuentas, autenticación ni permisos.
-- No hay persistencia entre sesiones.
-- La generación del enlace usa la ruta de invitación y el nombre de la persona solicitante.
-- Si una receta recibida no incluye ingredientes o pasos, se agregan textos mínimos para que siga siendo visible.
+- El proyecto Firebase `miga-3ad86` usa Cloud Firestore Standard en São Paulo (`southamerica-east1`).
+- Google Sign-In está configurado en Firebase Authentication. El dominio de Vercel y localhost están configurados como destinos OAuth.
+- Las reglas están en `firestore.rules` y ya fueron desplegadas en Firebase.
+- Sin configuración de Firebase, el acceso a la biblioteca queda desactivado.
+- Las invitaciones se guardan en Firestore y vencen a los 30 días; las rutas públicas permiten enviar una receta sin crear una cuenta. Solo se puede usar cada enlace una vez.
+- La generación del enlace depende de la URL pública de la app.
+- Los ingredientes y pasos vacíos se conservan vacíos; no se agregan textos de ejemplo.
 
 ## Diseño y experiencia
 
@@ -178,6 +183,15 @@ npm run dev
 
 La aplicación queda disponible en el puerto `3000`.
 
+### Configurar el acceso con Google
+
+1. El proyecto `miga-3ad86` ya tiene una app web, Google Sign-In y Firestore Standard configurados.
+2. `miga-six.vercel.app` y `localhost` están en los dominios autorizados de Firebase Authentication.
+3. Copia `.env.example` a `.env.local` y completa las variables `VITE_FIREBASE_*` con la configuración de la app web.
+4. Reinicia Vite después de cambiar las variables.
+
+Sin esos valores, la biblioteca no se puede abrir. Las variables de configuración web de Firebase son valores de cliente; no agregues secretos de servidor a variables `VITE_`.
+
 ### Verificación de tipos
 
 ```bash
@@ -198,22 +212,22 @@ npm run preview
 
 ## Rutas y acceso de invitación
 
-La aplicación detecta una invitación cuando la URL comienza con `/invitacion` o incluye el parámetro `invitacion`.
+La aplicación detecta una invitación en `/invitacion/{ownerUid}/{inviteId}` y valida su estado y vencimiento en Firestore antes de mostrar el formulario.
 
 Ejemplo:
 
 ```text
-/invitacion/abc123?de=Sofi
+/invitacion/{ownerUid}/{inviteId}
 ```
 
-El parámetro `de` define el nombre que aparece como persona solicitante. Si no está presente, se usa “Sofi”.
+El nombre de la persona solicitante se carga desde la invitación guardada por la dueña del recetario.
 
 ## Criterios de aceptación del flujo principal
 
 1. Desde Inicio, tocar “+” y luego “Pedir receta” muestra un enlace que puede copiarse y confirma “Enlace copiado”.
 2. En el formulario de invitado, intentar enviar sin título o sin nombre muestra un error y no agrega ninguna receta.
 3. Completar los campos obligatorios y enviar muestra “Receta enviada”.
-4. En modo de prueba, volver a la biblioteca muestra la nueva receta en “Últimas recetas recibidas”.
+4. La receta enviada aparece en “Últimas recetas recibidas” de la cuenta propietaria.
 5. Tocar la receta recibida abre correctamente su pantalla de detalle.
 
 ## Documento funcional

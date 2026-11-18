@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, FolderPlus, Pencil, Trash2, X } from 'lucide-react';
 import { Collection } from '../data/mockRecipes';
 import { CollectionShelfIllustration } from './KitchenIllustrations';
+import { ConfirmActionModal } from './ConfirmActionModal';
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
@@ -56,8 +57,6 @@ export function CreateCollectionModal({
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose, collection]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanName = name.trim();
@@ -92,6 +91,20 @@ export function CreateCollectionModal({
     onDelete?.(collection.id);
     onClose();
   };
+
+  if (!isOpen) return null;
+  if (isConfirmingDelete && collection) {
+    return (
+      <ConfirmActionModal
+        isOpen
+        title={`¿Eliminar «${collection.name}»?`}
+        description="Se quitará la colección. Las recetas seguirán en tu biblioteca, sin estar asignadas a ella."
+        confirmLabel="Eliminar colección"
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={handleDelete}
+      />
+    );
+  }
 
   return (
     <div
@@ -134,38 +147,7 @@ export function CreateCollectionModal({
           </button>
         </div>
 
-        {isConfirmingDelete ? (
-          <div className="p-6 space-y-5" role="alertdialog" aria-labelledby="delete-collection-heading">
-            <div className="space-y-2">
-              <h3
-                id="delete-collection-heading"
-                className="font-display text-[18px] font-semibold text-[#2D2D2D]"
-              >
-                ¿Eliminar «{collection?.name}»?
-              </h3>
-              <p className="text-[14px] leading-[1.6] text-[#747474]">
-                Se quitará la colección. Las recetas seguirán en tu biblioteca, sin estar asignadas a ella.
-              </p>
-            </div>
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsConfirmingDelete(false)}
-                className="min-h-[48px] px-6 py-3 rounded-[16px] border-2 border-[#FF4B8A] bg-transparent text-[#2D2D2D] font-semibold text-[14px] hover:bg-[#E8D4F8]/45 transition-colors cursor-pointer"
-              >
-                Volver
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="min-h-[48px] px-6 py-3 rounded-[16px] bg-[#FFA500] text-[#2D2D2D] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all cursor-pointer"
-              >
-                Eliminar colección
-              </button>
-            </div>
-          </div>
-        ) : (
-        /* Formulario */
+        {/* Formulario */}
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
           <div>
               <label
@@ -288,7 +270,6 @@ export function CreateCollectionModal({
             </button>
           </div>
         </form>
-        )}
       </div>
     </div>
   );

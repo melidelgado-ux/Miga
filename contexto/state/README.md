@@ -3,6 +3,9 @@
 Cada tarea activa tiene su propio archivo con rama y base verificadas cuando Git está
 disponible. No infieras rama, SHA ni limpieza a partir de este índice.
 
+- [Integración Firebase](firebase-backend.md) — Auth configurado, biblioteca conectada;
+  reglas de Firestore desplegadas; falta publicar el código desde un checkout Git conectado.
+
 - [Compatibilidad de dependencias para Vercel](vercel-dependencias.md) — `esbuild`
   alineado con Vite 8; tipos y build validados localmente. Esta carpeta no tiene
   metadatos Git; falta desplegar desde el checkout conectado a Vercel.
@@ -16,6 +19,8 @@ disponible. No infieras rama, SHA ni limpieza a partir de este índice.
   localmente, pendiente revisión visual en el checkout Git.
 - [Edición de colecciones](colecciones-edicion.md) — editar desde el detalle, borrar con
   confirmación y ajustar encabezados; tipos y build validados, pendiente revisión visual.
+- [Acceso con Google](inicio-sesion-google.md) — pantalla y flujo Firebase Auth conectados
+  a la biblioteca Firestore; falta configurar el proyecto web y el proveedor Google.
 
 Al cerrar la tarea, elimina su entrada del índice y archiva o elimina su archivo según
 conserve valor para futuras sesiones. No mezcles tareas de ramas distintas.

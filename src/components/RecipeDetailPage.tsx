@@ -9,7 +9,6 @@ import {
   Plus,
   RotateCcw,
   Sparkles,
-  User,
   UtensilsCrossed,
 } from 'lucide-react';
 import { Collection, Recipe } from '../data/mockRecipes';
@@ -76,6 +75,22 @@ function formatScaledQuantity(rawQty: string, baseServings: number, targetServin
   return String(formattedNumber).replace('.', ',');
 }
 
+function formatReceivedDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return 'Fecha de recepción no disponible';
+  return `Recibida el ${date.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })}`;
+}
+
+function formatAuthorName(author?: string): string {
+  const name = author?.trim() ?? '';
+  const selfName = name.match(/^Vos\s*\((.+)\)$/i)?.[1] ?? name.replace(/^Vos\s*/i, '');
+  return selfName.trim() || 'Sofía M.';
+}
+
 export function RecipeDetailPage({
   recipe,
   collections,
@@ -99,6 +114,8 @@ export function RecipeDetailPage({
   const isScaled = servings !== baseServings;
 
   const isReceived = recipe.origin === 'received';
+  const authorName = formatAuthorName(recipe.author);
+  const avatarName = isReceived ? recipe.senderName || recipe.author : authorName;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-10">
@@ -114,21 +131,14 @@ export function RecipeDetailPage({
         </button>
 
         <div className="flex items-center gap-2">
-          {isReceived ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#E8D4F8] text-[#2D2D2D] text-[12px] font-semibold">
-              <User className="w-3.5 h-3.5 text-[#FF4B8A]" strokeWidth={2} />
-              <span>De {recipe.senderName}</span>
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onEdit(recipe)}
-              className="min-h-[44px] px-4 py-2 rounded-[16px] bg-[#FFF8D6] border border-[#E8E8E8] text-[#2D2D2D] font-semibold text-[13px] hover:border-[#FF6B4A] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Edit2 className="w-3.5 h-3.5 text-[#FF6B4A]" strokeWidth={2} />
-              <span>Editar receta</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onEdit(recipe)}
+            className="min-h-[48px] px-4 py-2 rounded-[16px] bg-[#FFF8D6] border border-[#E8E8E8] text-[#2D2D2D] font-semibold text-[13px] hover:border-[#FF6B4A] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <Edit2 className="w-3.5 h-3.5 text-[#FF6B4A]" strokeWidth={2} />
+            <span>Editar receta</span>
+          </button>
         </div>
       </div>
 
@@ -157,16 +167,16 @@ export function RecipeDetailPage({
 
         <div className="pt-3 border-t border-[#E8E8E8] flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-[#FF4B8A] text-[#FFFFFF] flex items-center justify-center text-[12px] font-bold shrink-0">
-            {(recipe.senderName || recipe.author || 'M').slice(0, 2).toUpperCase()}
+            {(avatarName || 'M').slice(0, 2).toUpperCase()}
           </div>
           <div>
             <p className="text-[13px] font-semibold text-[#2D2D2D] leading-tight">
               {isReceived
-                ? `Compartida por ${recipe.senderName}`
-                : recipe.author || 'Vos (Sofía M.)'}
+                ? `Compartida por ${recipe.senderName || recipe.author || 'alguien'}`
+                : authorName}
             </p>
             <p className="text-[11px] text-[#747474]">
-              {isReceived ? 'Recibida en tu biblioteca' : 'Recetario personal'}
+              {isReceived ? formatReceivedDate(recipe.createdAt) : 'Recetario personal'}
             </p>
           </div>
         </div>

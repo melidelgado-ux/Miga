@@ -24,28 +24,32 @@ import {
   RecipeStep,
 } from '../data/mockRecipes';
 import { AddItemSheet, SheetTab } from './AddItemSheet';
+import { ConfirmActionModal } from './ConfirmActionModal';
+import { compressRecipeImage } from '../lib/compressImage';
 
 interface CreateRecipePageProps {
   collections: Collection[];
   initialRecipe?: Recipe | null;
   onCancel: () => void;
-  onSave: (recipe: Recipe) => void;
+  onSave: (recipe: Recipe) => void | Promise<void>;
+  onDelete: (recipeId: string) => void | Promise<void>;
   onNotify?: (message: string, type?: 'success' | 'error') => void;
 }
 
 const DIFFICULTIES: RecipeDifficulty[] = ['Fácil', 'Moderado', 'Difícil'];
-const AUTHOR_SUGGESTIONS = ['Vos (Sofía M.)', 'Abuela Rosa', 'Tía Carmen'];
+const AUTHOR_SUGGESTIONS = ['Yo', 'Abuela', 'Tía'];
 
 export function CreateRecipePage({
   collections,
   initialRecipe,
   onCancel,
   onSave,
+  onDelete,
   onNotify,
 }: CreateRecipePageProps) {
   const [title, setTitle] = useState(initialRecipe?.title ?? '');
   const [description, setDescription] = useState(initialRecipe?.description ?? '');
-  const [author, setAuthor] = useState(initialRecipe?.author ?? 'Vos (Sofía M.)');
+  const [author, setAuthor] = useState(initialRecipe?.author ?? '');
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialRecipe?.imageUrl);
   const [featured, setFeatured] = useState<boolean>(initialRecipe?.featured ?? false);
   const [prepMinutes, setPrepMinutes] = useState<number>(initialRecipe?.prepMinutes ?? 30);
@@ -67,6 +71,8 @@ export function CreateRecipePage({
   const [steps, setSteps] = useState<RecipeStep[]>(initialRecipe?.steps ?? []);
   const [migaTip, setMigaTip] = useState(initialRecipe?.migaTip ?? '');
   const [titleError, setTitleError] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Sheet para sumar o editar ingredientes y pasos
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -76,17 +82,11 @@ export function CreateRecipePage({
   );
   const [editingStep, setEditingStep] = useState<RecipeStep | null>(null);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setImageUrl(reader.result);
-        onNotify?.('Fotografía añadida a tu receta.', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
+    try { setImageUrl(await compressRecipeImage(file)); onNotify?.('Fotografía comprimida y añadida.', 'success'); }
+    catch (error) { onNotify?.(error instanceof Error ? error.message : 'No se pudo preparar la fotografía.', 'error'); }
   };
 
   const openAddSheet = (tab: SheetTab) => {
@@ -128,7 +128,8 @@ export function CreateRecipePage({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSaving) return;
     const cleanTitle = title.trim();
     if (!cleanTitle) {
       setTitleError(true);
@@ -140,38 +141,17 @@ export function CreateRecipePage({
     const recipePayload: Recipe = {
       id: initialRecipe?.id ?? `user-${Date.now()}`,
       title: cleanTitle,
-      description:
-        description.trim() ||
-        'Receta guardada en tu biblioteca personal de Miga.',
+      description: description.trim(),
       prepMinutes,
       servings,
       difficulty,
       category,
-      author: author.trim() || 'Vos (Sofía M.)',
+      author: author.trim() || 'Yo',
       featured,
       migaTip: migaTip.trim() || undefined,
       imageUrl,
-      ingredients:
-        ingredients.length > 0
-          ? ingredients
-          : [
-              {
-                id: `ing-default-${Date.now()}`,
-                name: 'Ingredientes anotados de forma rápida',
-                quantity: '1',
-                unit: 'unid',
-              },
-            ],
-      steps:
-        steps.length > 0
-          ? steps
-          : [
-              {
-                id: `step-default-${Date.now()}`,
-                title: 'Preparación',
-                instruction: 'Preparación lista para completar cuando cocines.',
-              },
-            ],
+      ingredients,
+      steps,
       origin: initialRecipe?.origin ?? 'own',
       senderName: initialRecipe?.senderName,
       isExample: false,
@@ -179,10 +159,25 @@ export function CreateRecipePage({
       createdAt: initialRecipe?.createdAt ?? new Date().toISOString(),
     };
 
-    onSave(recipePayload);
+    setIsSaving(true);
+    try { await onSave(recipePayload); }
+    finally { setIsSaving(false); }
   };
 
   const isReady = title.trim().length > 0;
+
+  if (isConfirmingDelete && initialRecipe) {
+    return (
+      <ConfirmActionModal
+        isOpen
+        title="¿Eliminar esta receta?"
+        description={`«${initialRecipe.title}» se quitará de tu recetario. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar receta"
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={() => onDelete(initialRecipe.id)}
+      />
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-10">
@@ -197,10 +192,16 @@ export function CreateRecipePage({
           <span>Cancelar</span>
         </button>
 
-        <span className="inline-flex items-center gap-1.5 bg-[#D4F8E8] text-[#2D2D2D] px-3.5 py-1.5 rounded-[8px] text-[12px] font-semibold">
-          <CheckCircle2 className="w-3.5 h-3.5 text-[#52C41A]" strokeWidth={2.2} />
-          <span>Borrador en edición</span>
-        </span>
+        {initialRecipe && (
+          <button
+            type="button"
+            onClick={() => setIsConfirmingDelete(true)}
+            className="min-h-[48px] px-4 py-2 rounded-[16px] bg-[#FFF8D6] border border-[#FFA500]/55 text-[#2D2D2D] font-semibold text-[13px] hover:border-[#FFA500] hover:bg-[#FFF8D6] transition-colors inline-flex items-center gap-2 cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4 text-[#FFA500]" strokeWidth={2} />
+            <span>Eliminar receta</span>
+          </button>
+        )}
       </div>
 
       {/* Título principal de la página */}
@@ -297,7 +298,7 @@ export function CreateRecipePage({
             type="text"
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
-            placeholder="Ej: Vos (Sofía M.)"
+            placeholder="Ej: mamá, tía, yo"
             className="miga-input w-full min-h-[48px] text-[14px] font-medium"
           />
 

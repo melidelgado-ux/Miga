@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   AlertCircle,
-  ArrowLeft,
   Camera,
   CheckCircle2,
   ChevronDown,
@@ -29,20 +28,19 @@ import {
   ReceivedShareIllustration,
 } from './KitchenIllustrations';
 import { AddItemSheet, SheetTab } from './AddItemSheet';
+import { compressRecipeImage } from '../lib/compressImage';
 
 interface GuestInvitePageProps {
   requesterName?: string;
-  onSubmitRecipe: (recipe: Recipe) => void;
-  onExitPreview?: () => void;
+  onSubmitRecipe: (recipe: Recipe) => void | Promise<void>;
   onNotify?: (message: string, type?: 'success' | 'error') => void;
 }
 
 const DIFFICULTIES: RecipeDifficulty[] = ['Fácil', 'Moderado', 'Difícil'];
 
 export function GuestInvitePage({
-  requesterName = 'Sofi',
+  requesterName = 'Miga',
   onSubmitRecipe,
-  onExitPreview,
   onNotify,
 }: GuestInvitePageProps) {
   const [title, setTitle] = useState('');
@@ -59,6 +57,7 @@ export function GuestInvitePage({
 
   const [titleError, setTitleError] = useState(false);
   const [authorError, setAuthorError] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   // Estado del sheet para sumar/editar ingredientes y pasos
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -74,17 +73,11 @@ export function GuestInvitePage({
     author: string;
   } | null>(null);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setImageUrl(reader.result);
-        onNotify?.('Fotografía añadida a tu receta.', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
+    try { setImageUrl(await compressRecipeImage(file)); onNotify?.('Fotografía comprimida y añadida.', 'success'); }
+    catch (error) { onNotify?.(error instanceof Error ? error.message : 'No se pudo preparar la fotografía.', 'error'); }
   };
 
   const openAddSheet = (tab: SheetTab) => {
@@ -126,24 +119,8 @@ export function GuestInvitePage({
     }
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setDescription('');
-    setAuthorName('');
-    setImageUrl(undefined);
-    setPrepMinutes(30);
-    setServings(4);
-    setDifficulty('Fácil');
-    setCategory('');
-    setIngredients([]);
-    setSteps([]);
-    setMigaTip('');
-    setTitleError(false);
-    setAuthorError(false);
-    setSubmittedSummary(null);
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSending) return;
     const cleanTitle = title.trim();
     const cleanAuthor = authorName.trim();
 
@@ -169,9 +146,7 @@ export function GuestInvitePage({
     const recipePayload: Recipe = {
       id: `received-${Date.now()}`,
       title: cleanTitle,
-      description:
-        description.trim() ||
-        `Receta compartida con mucho cariño por ${cleanAuthor}.`,
+      description: description.trim(),
       prepMinutes,
       servings,
       difficulty,
@@ -180,36 +155,22 @@ export function GuestInvitePage({
       featured: false,
       migaTip: migaTip.trim() || undefined,
       imageUrl,
-      ingredients:
-        ingredients.length > 0
-          ? ingredients
-          : [
-              {
-                id: `ing-guest-${Date.now()}`,
-                name: 'Ingredientes detallados en la preparación',
-                quantity: '1',
-                unit: 'unid',
-              },
-            ],
-      steps:
-        steps.length > 0
-          ? steps
-          : [
-              {
-                id: `step-guest-${Date.now()}`,
-                title: 'Preparación casera',
-                instruction: `Receta enviada por ${cleanAuthor} lista para preparar.`,
-              },
-            ],
+      ingredients,
+      steps,
       origin: 'received',
       senderName: cleanAuthor,
       isExample: false,
       createdAt: new Date().toISOString(),
     };
 
-    onSubmitRecipe(recipePayload);
-    setSubmittedSummary({ title: cleanTitle, author: cleanAuthor });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsSending(true);
+    try {
+      await onSubmitRecipe(recipePayload);
+      setSubmittedSummary({ title: cleanTitle, author: cleanAuthor });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      onNotify?.(error instanceof Error ? error.message : 'No se pudo enviar la receta. Intentá nuevamente.', 'error');
+    } finally { setIsSending(false); }
   };
 
   const isTitleReady = title.trim().length > 0;
@@ -238,7 +199,7 @@ export function GuestInvitePage({
             </h1>
             <p className="text-[16px] leading-[1.6] text-[#747474] max-w-md mx-auto">
               Tu receta <strong className="text-[#2D2D2D]">«{submittedSummary.title}»</strong>{' '}
-              ya quedó guardada en el recetario privado de{' '}
+              ya quedó guardada en el recetario de{' '}
               <strong className="text-[#2D2D2D]">{requesterName}</strong>.
             </p>
           </div>
@@ -250,25 +211,6 @@ export function GuestInvitePage({
             </span>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="min-h-[48px] px-6 py-3 rounded-[16px] border-2 border-[#FF6B4A] bg-transparent text-[#FF6B4A] font-semibold text-[15px] hover:bg-[#FFD6C9]/25 transition-colors cursor-pointer"
-            >
-              Compartir otra receta
-            </button>
-
-            {onExitPreview && (
-              <button
-                type="button"
-                onClick={onExitPreview}
-                className="miga-btn-primary min-h-[48px] px-6 py-3 rounded-[16px] flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Ver en mi biblioteca</span>
-              </button>
-            )}
-          </div>
         </section>
       </div>
     );
@@ -276,23 +218,6 @@ export function GuestInvitePage({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-10">
-      {onExitPreview && (
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onExitPreview}
-            className="min-h-[44px] px-4 py-2 rounded-[16px] bg-[#FFFFFF] border-2 border-[#E8E8E8] text-[#2D2D2D] font-semibold text-[14px] hover:border-[#FF6B4A] hover:bg-[#FFD6C9]/25 transition-colors inline-flex items-center gap-2 cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#FF6B4A]" strokeWidth={2.2} />
-            <span>Volver a mi recetario</span>
-          </button>
-
-          <span className="px-3 py-1 rounded-[10px] bg-[#E8D4F8]/70 text-[12px] font-semibold text-[#2D2D2D]">
-            Vista previa de invitación
-          </span>
-        </div>
-      )}
-
       {/* Mini onboarding / Saludo inicial */}
       <section className="p-5 sm:p-6 rounded-[24px] bg-[#FFF8D6] border border-[#E8E8E8] shadow-[0_4px_12px_rgba(0,0,0,0.08)] flex flex-col sm:flex-row sm:items-center gap-4">
         <ReceivedShareIllustration className="w-16 h-16 shrink-0" />

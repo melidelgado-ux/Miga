@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Copy, Eye, Link2, Plus, RefreshCw, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Link2, Plus, RefreshCw, X } from 'lucide-react';
 import {
   CreateRecipeIllustration,
   ReceivedShareIllustration,
@@ -9,27 +9,21 @@ interface AddChoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onChooseCreateOwn: () => void;
-  onPreviewInviteLink?: () => void;
+  onCreateInvite: () => Promise<string>;
   onNotify?: (message: string, type?: 'success' | 'error') => void;
-}
-
-function buildShareLink(): string {
-  const token = Math.random().toString(36).slice(2, 8);
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : 'https://miga.app';
-  return `${origin}/invitacion/${token}?de=Sofi`;
 }
 
 export function AddChoiceModal({
   isOpen,
   onClose,
   onChooseCreateOwn,
-  onPreviewInviteLink,
+  onCreateInvite,
   onNotify,
 }: AddChoiceModalProps) {
   const [step, setStep] = useState<'choice' | 'request-link'>('choice');
   const [generatedLink, setGeneratedLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [isCreatingLink, setIsCreatingLink] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -47,19 +41,24 @@ export function AddChoiceModal({
 
   if (!isOpen) return null;
 
-  const handleSelectRequestLink = () => {
-    setGeneratedLink(buildShareLink());
+  const handleSelectRequestLink = async () => {
     setCopied(false);
     setStep('request-link');
+    await handleCreateLink();
+  };
+
+  const handleCreateLink = async () => {
+    if (isCreatingLink) return;
+    setIsCreatingLink(true);
+    try { setGeneratedLink(await onCreateInvite()); }
+    catch { onNotify?.('No se pudo generar el enlace. Intentá otra vez.', 'error'); }
+    finally { setIsCreatingLink(false); }
   };
 
   const handleCopyLink = async () => {
     if (!generatedLink) return;
-    try {
-      await navigator.clipboard.writeText(generatedLink);
-    } catch {
-      // Fallback visual aunque el portapapeles esté restringido
-    }
+    try { await navigator.clipboard.writeText(generatedLink); }
+    catch { onNotify?.('No se pudo copiar automáticamente. Seleccioná y copiá el enlace.', 'error'); return; }
     setCopied(true);
     onNotify?.('Enlace copiado al portapapeles.', 'success');
     setTimeout(() => setCopied(false), 3000);
@@ -167,7 +166,7 @@ export function AddChoiceModal({
               </div>
 
               <p className="text-[13px] leading-[1.5] text-[#747474]">
-                En esta demo, el enlace abre una vista de prueba y no envía recetas entre dispositivos.
+                El enlace acepta una receta, vence en 30 días y solo se puede usar una vez.
               </p>
 
               <input
@@ -201,9 +200,10 @@ export function AddChoiceModal({
                 <button
                   type="button"
                   onClick={() => {
-                    setGeneratedLink(buildShareLink());
+                    void handleCreateLink();
                     setCopied(false);
                   }}
+                  disabled={isCreatingLink}
                   className="min-h-[52px] px-5 py-3 rounded-[16px] border-2 border-[#FF4B8A] text-[#FF4B8A] bg-[#FFFFFF] font-semibold text-[15px] hover:bg-[#E8D4F8]/30 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" strokeWidth={2} />
@@ -211,19 +211,6 @@ export function AddChoiceModal({
                 </button>
               </div>
 
-              {onPreviewInviteLink && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onPreviewInviteLink();
-                  }}
-                  className="w-full min-h-[44px] px-4 py-2 rounded-[14px] bg-[#FFFFFF] border border-[#E8E8E8] text-[#2D2D2D] text-[13px] font-semibold hover:border-[#FF4B8A] transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-[#FF4B8A]" strokeWidth={2} />
-                  <span>Abrir vista del enlace</span>
-                </button>
-              )}
             </div>
           </div>
         )}

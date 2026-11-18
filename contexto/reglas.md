@@ -22,16 +22,16 @@ prevalecen. No se añaden políticas sin evidencia del repositorio.
   ejecutar `npm run build` y comprobar que los assets referenciados se copian.
 - **Excepción:** cambio explícitamente solicitado con comportamiento sustituto validado.
 
-## MIGA-03 — No describir persistencia que no existe
+## MIGA-03 — Afirmar persistencia solo con evidencia
 
-- **Obligación:** describir recetas y colecciones como estado local volátil hasta que el
-  código incorpore almacenamiento; no prometer sincronización ni privacidad del enlace
-  de invitación.
+- **Obligación:** describir recetas y colecciones según el backend implementado y
+  desplegado. No prometer privacidad ni sincronización entre usuarios si las reglas
+  remotas no están aplicadas.
 - **Alcance:** documentación de producto, arquitectura y comportamiento.
-- **Detección:** contrastar afirmaciones con `src/App.tsx`, `src/data/mockRecipes.ts`,
-  `src/components/AddChoiceModal.tsx` y el formulario invitado; buscar almacenamiento,
-  validación del token o API antes de cambiar el estado.
-- **Excepción:** una implementación posterior demostrable puede actualizar estas fuentes.
+- **Detección:** contrastar `src/App.tsx`, `src/data/firestore.ts`, `firestore.rules` y el
+  estado desplegado de Firebase antes de describir datos como persistentes o privados.
+- **Excepción:** ninguna; la evidencia de configuración, despliegue y reglas debe
+  comprobarse en cada cambio de backend.
 
 ## MIGA-04 — Usar solo comandos declarados
 

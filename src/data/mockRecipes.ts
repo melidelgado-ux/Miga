@@ -61,6 +61,7 @@ export interface Recipe {
   steps: RecipeStep[];
   origin: 'own' | 'received';
   senderName?: string;
+  invitationId?: string;
   isExample: boolean;
   collectionId?: string;
   createdAt: string;

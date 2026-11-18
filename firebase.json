@@ -1,0 +1,20 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "southamerica-east1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Miga",
+        "supportEmail": "melidelgado.dg@gmail.com",
+        "authorizedRedirectUris": [
+          "https://miga-six.vercel.app",
+          "http://localhost:3000"
+        ]
+      }
+    }
+  }
+}

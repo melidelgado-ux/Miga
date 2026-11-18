@@ -10,6 +10,10 @@ interface ProfileModalProps {
   theme: 'light' | 'dark';
   onThemeChange: (theme: 'light' | 'dark') => void;
   onClose: () => void;
+  displayName: string;
+  email: string | null;
+  photoURL: string | null;
+  onSignOut: () => void;
 }
 
 export function ProfileModal({
@@ -20,6 +24,10 @@ export function ProfileModal({
   theme,
   onThemeChange,
   onClose,
+  displayName,
+  email,
+  photoURL,
+  onSignOut,
 }: ProfileModalProps) {
   useEffect(() => {
     if (!isOpen) return;
@@ -46,19 +54,24 @@ export function ProfileModal({
       >
         <div className="p-6 bg-[#FFF8D6] border-b border-[#E8E8E8] flex items-start justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-14 h-14 rounded-full bg-[#FFD6C9] border-2 border-[#FF6B4A] flex items-center justify-center shrink-0">
-              <User className="w-7 h-7 text-[#2D2D2D]" strokeWidth={2} />
-            </div>
+            {photoURL ? (
+              <img src={photoURL} alt="" className="w-14 h-14 rounded-full border-2 border-[#FF6B4A] object-cover shrink-0" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-[#FFD6C9] border-2 border-[#FF6B4A] flex items-center justify-center shrink-0">
+                <User className="w-7 h-7 text-[#2D2D2D]" strokeWidth={2} />
+              </div>
+            )}
             <div>
               <h2
                 id="profile-modal-heading"
                 className="font-display text-[22px] font-bold text-[#2D2D2D] leading-tight"
               >
-                Sofi
+                {displayName}
               </h2>
               <p className="text-[14px] text-[#747474] mt-0.5">
-                Biblioteca privada en Miga
+                Sesión iniciada con Google
               </p>
+              {email && <p className="text-[12px] text-[#747474] mt-0.5 break-all">{email}</p>}
             </div>
           </div>
 
@@ -102,12 +115,19 @@ export function ProfileModal({
           <div className="p-4 rounded-[16px] bg-[#FFF8D6]/50 border border-[#E8E8E8] flex items-center gap-3.5">
             <GreetingKitchenIllustration className="w-12 h-12 shrink-0" />
             <p className="text-[13px] leading-[1.5] text-[#2D2D2D]/85">
-              Tus recetas se mantienen privadas y puedes recibir nuevas de familiares o
-              amigos aunque no tengan la app.
+              Iniciaste sesión con tu cuenta de Google. Tus recetas y colecciones se
+              guardan en tu biblioteca de Firebase.
             </p>
           </div>
 
-          <div className="flex">
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="w-full min-h-[48px] px-5 py-2.5 rounded-[16px] bg-[#FF6B4A] text-[#FFFFFF] font-semibold text-[15px] hover:brightness-95 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF6B4A]/25"
+            >
+              Cerrar sesión
+            </button>
             <button
               type="button"
               onClick={onClose}

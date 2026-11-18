@@ -39,12 +39,12 @@ Completar el recorrido desde la creación del enlace hasta la recepción visible
 
 1. La dueña abre Inicio y toca el botón “+”.
 2. Selecciona “Pedir receta”.
-3. Miga genera un enlace privado de invitación.
+3. Miga genera una invitación ligada a la cuenta de la dueña, válida por 30 días y para una receta.
 4. La dueña copia el enlace y lo comparte.
 5. La persona invitada abre el enlace y ve el formulario de receta.
 6. Completa el nombre de la receta y su nombre; los demás datos son opcionales.
 7. Toca “Enviar receta”.
-8. Miga valida los campos obligatorios y crea la receta como recibida.
+8. Miga valida el enlace, los campos obligatorios y crea la receta como recibida mientras consume el enlace en la misma operación atómica.
 9. Se muestra la confirmación “Receta enviada”.
 10. La receta aparece en “Últimas recetas recibidas” y puede abrirse en detalle.
 
@@ -67,7 +67,7 @@ Completar el recorrido desde la creación del enlace hasta la recepción visible
 - Permite copiarlo.
 - Muestra confirmación al copiar.
 - Permite generar otro enlace.
-- Permite abrir la vista de invitado en modo de prueba.
+- Informa que el enlace vence a los 30 días y solo acepta una receta.
 
 ### Formulario de invitado
 
@@ -89,15 +89,13 @@ Campos disponibles:
 
 - Formulario incompleto: se informa qué campos faltan y no se envía.
 - Formulario listo: se muestra que puede enviarse.
-- Ingredientes o pasos vacíos: se agregan textos mínimos para mantener visible la receta.
+- Ingredientes y pasos pueden quedar vacíos; no se inventa contenido para completar el envío.
 
 ### Confirmación
 
 - Muestra “Receta enviada”.
 - Muestra el título de la receta.
 - Confirma que quedó guardada para la persona solicitante.
-- Permite compartir otra receta.
-- En modo de prueba, permite volver a la biblioteca.
 
 ### Detalle de receta
 
@@ -131,21 +129,20 @@ Campos disponibles:
 - La receta recibida utiliza la estructura `Recipe` existente.
 - La receta se marca con `origin: 'received'`.
 - El nombre del invitado se guarda como autor y remitente.
-- Los datos se mantienen en el estado local actual de la aplicación.
-- Esta versión no agrega backend ni persistencia entre sesiones.
-- No se modifican configuración, ajustes, tokens ni variables de entorno.
+- Las recetas, colecciones e invitaciones se guardan en Cloud Firestore bajo el UID de la dueña.
+- Las invitaciones se consumen con una transacción que registra una receta recibida.
+- Las fotos se comprimen en el navegador y se guardan como JPEG en el documento de Firestore, con límite de 200 KiB.
+- Las reglas de Firestore deben restringir lecturas y escrituras de la biblioteca a su dueña y permitir únicamente el envío transaccional por invitación.
 
 ## 9. Criterios de aceptación
 
 1. Desde Inicio, tocar “+” y luego “Pedir receta” muestra un enlace que puede copiarse y confirma “Enlace copiado”.
 2. En el formulario de invitado, intentar enviar sin título o sin nombre muestra un error y no agrega ninguna receta.
 3. Completar los campos obligatorios y enviar muestra “Receta enviada”.
-4. En modo de prueba, volver a la biblioteca muestra la nueva receta en “Últimas recetas recibidas”.
+4. Después del envío, la receta aparece en “Últimas recetas recibidas” de la cuenta propietaria.
 5. Tocar la receta recibida abre correctamente su pantalla de detalle.
 
 ## 10. Riesgos y pendientes
 
-- La receta no persiste después de cerrar o recargar la aplicación.
-- El enlace actual no coordina datos entre dispositivos porque no existe backend.
-- Deben definirse más adelante la expiración, seguridad y reutilización de enlaces.
-- La sincronización entre personas requiere una futura capa de servidor.
+- Las reglas desplegadas deben mantenerse alineadas con `firestore.rules`.
+- El dominio público está autorizado en Firebase Authentication para que Google Sign-In funcione desde Vercel.

@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(uid) { return request.auth != null && request.auth.uid == uid; }
+    function canSubmitAsGuest(uid) { return request.auth == null || request.auth.uid != uid; }
+    function validImage(data) {
+      return !('imageUrl' in data) ||
+        (data.imageUrl is string && data.imageUrl.size() <= 280000 &&
+          (data.imageUrl.matches('^data:image/jpeg;base64,[A-Za-z0-9+/]*={0,2}$') ||
+           data.imageUrl.matches('^https://[^ ]+$')));
+    }
+    function validIngredient(item) {
+      return item is map
+        && item.keys().hasOnly(['id','name','quantity','unit','note'])
+        && item.id is string && item.id.size() > 0 && item.id.size() <= 100
+        && item.name is string && item.name.size() > 0 && item.name.size() <= 160
+        && item.quantity is string && item.quantity.size() <= 80
+        && item.unit is string && item.unit.size() <= 80
+        && (!('note' in item) || (item.note is string && item.note.size() <= 500));
+    }
+    function validStep(item) {
+      return item is map
+        && item.keys().hasOnly(['id','title','instruction','tip'])
+        && item.id is string && item.id.size() > 0 && item.id.size() <= 100
+        && item.instruction is string && item.instruction.size() <= 2000
+        && (!('title' in item) || (item.title is string && item.title.size() <= 120))
+        && (!('tip' in item) || (item.tip is string && item.tip.size() <= 500));
+    }
+    function validIngredients(items) {
+      return items is list && items.size() <= 20
+        && (items.size() <= 0 || validIngredient(items[0]))
+        && (items.size() <= 1 || validIngredient(items[1]))
+        && (items.size() <= 2 || validIngredient(items[2]))
+        && (items.size() <= 3 || validIngredient(items[3]))
+        && (items.size() <= 4 || validIngredient(items[4]))
+        && (items.size() <= 5 || validIngredient(items[5]))
+        && (items.size() <= 6 || validIngredient(items[6]))
+        && (items.size() <= 7 || validIngredient(items[7]))
+        && (items.size() <= 8 || validIngredient(items[8]))
+        && (items.size() <= 9 || validIngredient(items[9]))
+        && (items.size() <= 10 || validIngredient(items[10]))
+        && (items.size() <= 11 || validIngredient(items[11]))
+        && (items.size() <= 12 || validIngredient(items[12]))
+        && (items.size() <= 13 || validIngredient(items[13]))
+        && (items.size() <= 14 || validIngredient(items[14]))
+        && (items.size() <= 15 || validIngredient(items[15]))
+        && (items.size() <= 16 || validIngredient(items[16]))
+        && (items.size() <= 17 || validIngredient(items[17]))
+        && (items.size() <= 18 || validIngredient(items[18]))
+        && (items.size() <= 19 || validIngredient(items[19]));
+    }
+    function validSteps(items) {
+      return items is list && items.size() <= 20
+        && (items.size() <= 0 || validStep(items[0]))
+        && (items.size() <= 1 || validStep(items[1]))
+        && (items.size() <= 2 || validStep(items[2]))
+        && (items.size() <= 3 || validStep(items[3]))
+        && (items.size() <= 4 || validStep(items[4]))
+        && (items.size() <= 5 || validStep(items[5]))
+        && (items.size() <= 6 || validStep(items[6]))
+        && (items.size() <= 7 || validStep(items[7]))
+        && (items.size() <= 8 || validStep(items[8]))
+        && (items.size() <= 9 || validStep(items[9]))
+        && (items.size() <= 10 || validStep(items[10]))
+        && (items.size() <= 11 || validStep(items[11]))
+        && (items.size() <= 12 || validStep(items[12]))
+        && (items.size() <= 13 || validStep(items[13]))
+        && (items.size() <= 14 || validStep(items[14]))
+        && (items.size() <= 15 || validStep(items[15]))
+        && (items.size() <= 16 || validStep(items[16]))
+        && (items.size() <= 17 || validStep(items[17]))
+        && (items.size() <= 18 || validStep(items[18]))
+        && (items.size() <= 19 || validStep(items[19]));
+    }
+    function validRecipe(data) {
+      return data.keys().hasOnly(['title','description','prepMinutes','servings','difficulty','category','author','featured','migaTip','imageUrl','ingredients','steps','origin','senderName','collectionId','invitationId','createdAt','updatedAt'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
+        && data.description is string && data.description.size() <= 2000
+        && data.prepMinutes is int && data.prepMinutes >= 0 && data.prepMinutes <= 1440
+        && data.servings is int && data.servings >= 1 && data.servings <= 100
+        && data.difficulty in ['Fácil','Moderado','Difícil']
+        && data.category is string && data.category.size() <= 60
+        && data.author is string && data.author.size() <= 80
+        && data.featured is bool
+        && (!('migaTip' in data) || (data.migaTip is string && data.migaTip.size() <= 1000))
+        && validIngredients(data.ingredients)
+        && validSteps(data.steps)
+        && data.origin in ['own','received']
+        && (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 80))
+        && (!('collectionId' in data) || (data.collectionId is string && data.collectionId.size() <= 150))
+        && (!('invitationId' in data) || (data.invitationId is string && data.invitationId.size() <= 150))
+        && data.createdAt is timestamp && data.updatedAt is timestamp && validImage(data);
+    }
+    function validCollection(data) {
+      return data.keys().hasOnly(['name','description','pastelBg','createdAt','updatedAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 80
+        && data.description is string && data.description.size() <= 500
+        && data.pastelBg in ['#FFD6C9','#E8D4F8','#D4F8E8','#FFF8D6']
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read, write: if false;
+      match /recipes/{recipeId} {
+        allow read: if signedInAs(uid);
+        allow create: if (signedInAs(uid) && validRecipe(request.resource.data))
+          || (canSubmitAsGuest(uid) && validRecipe(request.resource.data)
+            && request.resource.data.origin == 'received'
+            && request.resource.data.featured == false
+            && request.resource.data.invitationId is string
+            && request.resource.data.senderName == request.resource.data.author
+            && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.used == true
+            && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.recipeId == recipeId
+            && getAfter(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid);
+        allow update: if signedInAs(uid) && validRecipe(request.resource.data);
+        allow delete: if signedInAs(uid);
+      }
+      match /collections/{collectionId} {
+        allow read: if signedInAs(uid);
+        allow create, update: if signedInAs(uid) && validCollection(request.resource.data);
+        allow delete: if signedInAs(uid);
+      }
+      match /invitations/{inviteId} {
+        allow get: if signedInAs(uid) || resource.data.ownerUid == uid;
+        allow list: if signedInAs(uid);
+        allow create: if signedInAs(uid)
+          && request.resource.data.keys().hasOnly(['ownerUid','ownerName','createdAt','expiresAt','used'])
+          && request.resource.data.ownerUid == uid
+          && request.resource.data.ownerName is string && request.resource.data.ownerName.size() <= 80
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.expiresAt is timestamp
+          && request.resource.data.expiresAt > request.time
+          && request.resource.data.expiresAt <= request.time + duration.value(30, 'd')
+          && request.resource.data.used == false;
+        allow update: if canSubmitAsGuest(uid)
+          && resource.data.ownerUid == uid && resource.data.used == false
+          && resource.data.expiresAt > request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used','usedAt','recipeId'])
+          && request.resource.data.used == true
+          && request.resource.data.usedAt == request.time
+          && request.resource.data.recipeId is string
+          && getAfter(/databases/$(database)/documents/users/$(uid)/recipes/$(request.resource.data.recipeId)).data.invitationId == inviteId
+          && getAfter(/databases/$(database)/documents/users/$(uid)/recipes/$(request.resource.data.recipeId)).data.origin == 'received';
+        allow delete: if signedInAs(uid);
+      }
+    }
+  }
+}

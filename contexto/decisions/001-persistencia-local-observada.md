@@ -1,7 +1,7 @@
 # Persistencia de recetas en la implementación actual
 
 - **Fecha:** 2026-11-18
-- **Estado:** observada
+- **Estado:** observada e histórica; reemplazada por `002-backend-firebase-invitaciones.md`.
 - **Problema:** distinguir el comportamiento implementado de los objetivos del PRD.
 - **Decisión:** no hay persistencia observada; recetas y colecciones se inicializan y
   mantienen en estado local de React durante la sesión.
@@ -13,4 +13,4 @@
   como privadas; el token se genera en cliente y la ruta no lo valida.
 - **Evidencia:** `src/App.tsx`, `src/data/mockRecipes.ts`,
   `src/components/AddChoiceModal.tsx`, `README.md`, `PRD.md`.
-- **Reemplaza:** ninguna.
+- **Reemplaza:** ninguna; posteriormente fue reemplazada por la decisión 002.
