@@ -171,7 +171,8 @@ service cloud.firestore {
         && (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 500))
         && (!('collectionId' in data) || (data.collectionId is string && data.collectionId.size() <= 150))
         && (!('invitationId' in data) || (data.invitationId is string && data.invitationId.size() <= 150))
-        && data.createdAt == resource.data.createdAt
+        && data.createdAt is timestamp
+        && (!(resource.data.createdAt is timestamp) || data.createdAt == resource.data.createdAt)
         && data.updatedAt is timestamp && validImage(data);
     }
     function validCollection(data) {
