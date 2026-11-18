@@ -176,7 +176,19 @@ export default function App() {
     const isEditing = Boolean(editingRecipe);
     if (!authenticatedUser) return;
     try { await saveRecipe(authenticatedUser.uid, savedRecipe, !isEditing); }
-    catch { setFeedback({ message: 'No se pudo guardar la receta. Revisá la conexión e intentá de nuevo.', type: 'error' }); return; }
+    catch (error) {
+      console.error('No se pudo guardar la receta en Firestore:', error);
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error &&
+        typeof error.code === 'string'
+          ? ` (${error.code})`
+          : '';
+      setFeedback({
+        message: `No se pudo guardar la receta. Revisá la conexión e intentá de nuevo.${code}`,
+        type: 'error',
+      });
+      return;
+    }
     setFeedback({
       message: isEditing
         ? `«${savedRecipe.title}» actualizada.`
@@ -622,17 +634,17 @@ export default function App() {
 
               {addedRecipes.length > 0 && (
                 <div className="pt-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('recetas');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-[16px] border-2 border-[#FF6B4A] bg-transparent text-[#FF6B4A] font-semibold text-[15px] hover:bg-[#FFD6C9]/25 active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>Ver todas</span>
-                  <ArrowRight className="w-4 h-4" strokeWidth={2.2} />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('recetas');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-[16px] border-2 border-[#FF6B4A] bg-transparent text-[#FF6B4A] font-semibold text-[15px] hover:bg-[#FFD6C9]/25 active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Ver todas</span>
+                    <ArrowRight className="w-4 h-4" strokeWidth={2.2} />
+                  </button>
                 </div>
               )}
             </section>
