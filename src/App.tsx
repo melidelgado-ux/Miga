@@ -741,7 +741,7 @@ export default function App() {
           <section aria-labelledby="collections-page-heading" className="space-y-8">
             <div className="p-5 sm:p-6 rounded-[24px] bg-[#FFF8D6]/85 border border-[#E8E8E8] shadow-[0_4px_12px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1.5">
-                <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <h1
                     id="collections-page-heading"
                     className="font-display text-[26px] sm:text-[32px] font-bold leading-[1.2] text-[#2D2D2D]"
