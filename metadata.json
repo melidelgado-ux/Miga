@@ -1,0 +1,6 @@
+{
+  "name": "Miga",
+  "description": "Biblioteca privada de recetas colaborativa.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
