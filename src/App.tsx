@@ -20,6 +20,7 @@ import {
   Recipe,
 } from './data/mockRecipes';
 import {
+  CreateRecipeIllustration,
   GreetingKitchenIllustration,
   MigaBrandMark,
   ReceivedShareIllustration,
@@ -513,13 +514,47 @@ export default function App() {
                     Últimas recetas añadidas
                   </h2>
                   <p className="text-[14px] text-[#747474] mt-1">
-                    Tus preparaciones para volver a hacerlas cuando quieras.
+                    {addedRecipes.length === 0
+                      ? 'Cuando sumes una receta propia, aparecerá acá.'
+                      : 'Tus preparaciones para volver a hacerlas cuando quieras.'}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {addedRecipes.map((recipe) => (
+              {addedRecipes.length === 0 ? (
+                <div className="rounded-[24px] bg-[#FFD6C9]/55 border border-[#F6C4B4] p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7">
+                  <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-[20px] bg-[#FFFFFF]/75 flex items-center justify-center shrink-0">
+                    <CreateRecipeIllustration className="w-14 h-14 sm:w-16 sm:h-16" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <h3 className="font-display text-[18px] sm:text-[20px] font-semibold leading-[1.3] text-[#2D2D2D]">
+                      Tu recetario empieza acá
+                    </h3>
+                    <p className="text-[14px] sm:text-[15px] leading-[1.6] text-[#2D2D2D]/80 max-w-2xl">
+                      Todavía no agregaste recetas propias. Guardá ese plato que ya te sale de memoria para volver a prepararlo cuando quieras.
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => openCreateRecipePage(null)}
+                      className="miga-btn-primary w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-full flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" strokeWidth={2.5} />
+                      <span>Crear receta</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddChoiceOpen(true)}
+                      className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#222222] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all cursor-pointer"
+                    >
+                      Pedir receta
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {addedRecipes.map((recipe) => (
                   <article
                     key={recipe.id}
                     className="miga-card bg-[#FFFFFF] border border-[#E8E8E8] overflow-hidden flex flex-col"
@@ -581,10 +616,12 @@ export default function App() {
                       </div>
                     </button>
                   </article>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              <div className="pt-1 flex justify-end">
+              {addedRecipes.length > 0 && (
+                <div className="pt-1 flex justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -596,7 +633,8 @@ export default function App() {
                   <span>Ver todas</span>
                   <ArrowRight className="w-4 h-4" strokeWidth={2.2} />
                 </button>
-              </div>
+                </div>
+              )}
             </section>
 
             {/* 4. Últimas recetas recibidas */}
