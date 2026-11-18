@@ -100,3 +100,11 @@ prevalecen. No se añaden políticas sin evidencia del repositorio.
   visible sobre esas superficies use blanco; confirmar también el estilo compartido de
   `.miga-btn-primary` y los estados de tema oscuro.
 - **Excepción:** ninguna sin una instrucción posterior explícita del usuario.
+
+
+## MIGA-11 — Texto blanco sobre botones fucsia
+
+- **Obligación:** todos los botones cuyo fondo sea el fucsia principal (`#FF4B8A`) usan texto blanco (`#FFFFFF`), incluidos los estados hover cuando el fondo cambia a fucsia.
+- **Alcance:** botones CTA con fondo fucsia; no aplica a enlaces o iconos fucsia sobre fondos claros.
+- **Detección:** buscar `bg-[#FF4B8A]` y revisar que el texto del botón use `text-[#FFFFFF]`; revisar también fondos fucsia definidos en estados hover.
+- **Excepción:** ninguna sin una instrucción posterior explícita del usuario.

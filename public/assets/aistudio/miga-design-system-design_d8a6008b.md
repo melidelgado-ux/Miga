@@ -89,7 +89,7 @@ Miga es una biblioteca de recetas colaborativa y playful. Este design system gu�
 
 ### Botones
 - **Primario (CTA Principal)**: Fondo naranja coral (#FF6B4A), texto blanco, border-radius 16px, padding 12px 32px, font-weight 600, sombra suave en hover
-- **Secundario**: Fondo fucsia (#FF4B8A), texto blanco, mismo tamaño
+- **Secundario**: Fondo fucsia (#FF4B8A), texto blanco (#FFFFFF), mismo tamaño. Todo botón que use este fondo mantiene texto blanco en sus estados interactivos.
 - **Tertiary**: Fondo transparente, texto naranja coral, borde 2px naranja coral
 - **Pill (Full-width móvil)**: Altura 56px, border-radius full, aplicable a primario/secundario
 - **Estados**: Hover (sombra aumentada, opacidad 0.9), Active (escala 0.98), Disabled (opacidad 0.5)

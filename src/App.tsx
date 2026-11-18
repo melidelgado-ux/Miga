@@ -512,7 +512,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setIsAddChoiceOpen(true)}
-                    className="w-full min-h-[52px] px-4 py-3 rounded-full border-2 border-[#FF4B8A] bg-[#FF4B8A] text-[#222222] font-semibold text-[14px] hover:brightness-95 transition-all active:scale-[0.98] cursor-pointer"
+                    className="w-full min-h-[52px] px-4 py-3 rounded-full border-2 border-[#FF4B8A] bg-[#FF4B8A] text-[#FFFFFF] font-semibold text-[14px] hover:brightness-95 transition-all active:scale-[0.98] cursor-pointer"
                   >
                     Pedir receta
                   </button>
@@ -563,7 +563,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setIsAddChoiceOpen(true)}
-                      className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#222222] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all cursor-pointer"
+                      className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#FFFFFF] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all cursor-pointer"
                     >
                       Pedir receta
                     </button>
@@ -689,7 +689,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setIsAddChoiceOpen(true)}
-                    className="shrink-0 min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#222222] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+                    className="shrink-0 min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#FFFFFF] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Pedir una receta
                     <ArrowRight className="w-4 h-4" strokeWidth={2.2} />
