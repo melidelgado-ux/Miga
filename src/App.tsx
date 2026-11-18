@@ -183,7 +183,9 @@ export default function App() {
           ? error.code
           : '';
       setFeedback({
-        message: code
+        message: code === 'recipe-validation' && error instanceof Error
+          ? error.message
+          : code
           ? `Error de Firebase: ${code}. No se pudo guardar la receta.`
           : 'No se pudo guardar la receta. Revisá la conexión e intentá de nuevo.',
         type: 'error',

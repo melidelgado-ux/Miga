@@ -154,6 +154,65 @@ function definedFields<T extends Record<string, unknown>>(value: T): Partial<T> 
   ) as Partial<T>;
 }
 
+function recipeRuleIssues(data: Record<string, unknown>): string[] {
+  const issues: string[] = [];
+  const checkString = (key: string, label: string, max: number, min = 0) => {
+    const value = data[key];
+    if (typeof value !== 'string' || value.length < min || value.length > max) issues.push(label);
+  };
+  checkString('title', 'el nombre (1–120 caracteres)', 120, 1);
+  checkString('description', 'la descripción (máximo 2000 caracteres)', 2000);
+  checkString('category', 'la categoría (máximo 60 caracteres)', 60);
+  checkString('author', 'el autor (máximo 80 caracteres)', 80);
+  if (typeof data.prepMinutes !== 'number' || !Number.isInteger(data.prepMinutes) || data.prepMinutes < 0 || data.prepMinutes > 1440) {
+    issues.push('el tiempo (entre 0 y 1440 minutos)');
+  }
+  if (typeof data.servings !== 'number' || !Number.isInteger(data.servings) || data.servings < 1 || data.servings > 100) {
+    issues.push('las porciones (entre 1 y 100)');
+  }
+  if (!['Fácil', 'Moderado', 'Difícil'].includes(String(data.difficulty))) issues.push('la dificultad');
+  if (typeof data.featured !== 'boolean') issues.push('el estado de destacada');
+  if (data.migaTip !== undefined && (typeof data.migaTip !== 'string' || data.migaTip.length > 1000)) {
+    issues.push('el consejo (máximo 1000 caracteres)');
+  }
+  if (data.imageUrl !== undefined && (typeof data.imageUrl !== 'string' || data.imageUrl.length > 280000 ||
+      (!data.imageUrl.startsWith('https://') && !/^data:image\/jpeg;base64,[A-Za-z0-9+/]*={0,2}$/.test(data.imageUrl)))) {
+    issues.push('la foto (JPEG comprimido o URL HTTPS de máximo 200 KiB)');
+  }
+  if (!Array.isArray(data.ingredients) || data.ingredients.length > 20) {
+    issues.push('los ingredientes (máximo 20)');
+  } else {
+    data.ingredients.forEach((item, index) => {
+      if (!isRecord(item) || typeof item.id !== 'string' || item.id.length < 1 || item.id.length > 100 ||
+          typeof item.name !== 'string' || item.name.length < 1 || item.name.length > 160 ||
+          typeof item.quantity !== 'string' || item.quantity.length > 80 ||
+          typeof item.unit !== 'string' || item.unit.length > 80 ||
+          (item.note !== undefined && (typeof item.note !== 'string' || item.note.length > 500))) {
+        issues.push(`el ingrediente ${index + 1} (revisá nombre, cantidad, unidad o nota)`);
+      }
+    });
+  }
+  if (!Array.isArray(data.steps) || data.steps.length > 20) {
+    issues.push('los pasos (máximo 20)');
+  } else {
+    data.steps.forEach((item, index) => {
+      if (!isRecord(item) || typeof item.id !== 'string' || item.id.length < 1 || item.id.length > 100 ||
+          typeof item.instruction !== 'string' || item.instruction.length > 2000 ||
+          (item.title !== undefined && (typeof item.title !== 'string' || item.title.length > 120)) ||
+          (item.tip !== undefined && (typeof item.tip !== 'string' || item.tip.length > 500))) {
+        issues.push(`el paso ${index + 1} (revisá título, instrucción o tip)`);
+      }
+    });
+  }
+  if (!['own', 'received'].includes(String(data.origin))) issues.push('el origen de la receta');
+  for (const [key, label, max] of [
+    ['senderName', 'el remitente', 80], ['collectionId', 'la colección', 150], ['invitationId', 'la invitación', 150],
+  ] as const) {
+    if (data[key] !== undefined && (typeof data[key] !== 'string' || data[key].length > max)) issues.push(label);
+  }
+  return issues;
+}
+
 export function subscribeUserRecipes(
   uid: string,
   onData: (recipes: Recipe[]) => void,
@@ -189,6 +248,12 @@ export function subscribeUserCollections(
 export async function saveRecipe(uid: string, recipe: Recipe, isNew: boolean) {
   const recipeRef = doc(requireDb(), 'users', uid, 'recipes', recipe.id);
   const base = definedFields(recipeFields(recipe) as Record<string, unknown>);
+  const issues = recipeRuleIssues(base as Record<string, unknown>);
+  if (issues.length > 0) {
+    throw Object.assign(new Error(`Firestore rechazará estos datos: ${issues.join('; ')}.`), {
+      code: 'recipe-validation',
+    });
+  }
 
   if (isNew) {
     await setDoc(recipeRef, {
