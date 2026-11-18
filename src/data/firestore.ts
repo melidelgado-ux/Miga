@@ -296,7 +296,7 @@ export async function saveRecipe(uid: string, recipe: Recipe, isNew: boolean) {
     });
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'permission-denied') {
-      throw Object.assign(new Error('Firebase permitió leer esta receta, pero rechazó la escritura (permission-denied).'), {
+      throw Object.assign(new Error('Error de Firebase: permission-denied. Se pudo leer la receta, pero se rechazó el guardado.'), {
         code: 'recipe-write-permission-denied',
       });
     }
@@ -438,7 +438,7 @@ export async function submitInvitedRecipe(
     const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
       ? error.code
       : 'unknown';
-    throw Object.assign(new Error(`Firebase rechazó el envío de la receta (${code}).`), {
+    throw Object.assign(new Error(`Error de Firebase: ${code}. Se rechazó el envío de la receta.`), {
       code: `guest-recipe-write-${code}`,
     });
   }
