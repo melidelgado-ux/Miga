@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, Copy, Link2, Plus, RefreshCw, X } from 'lucide-react';
 import {
   CreateRecipeIllustration,
@@ -11,6 +11,7 @@ interface AddChoiceModalProps {
   onChooseCreateOwn: () => void;
   onCreateInvite: () => Promise<string>;
   onNotify?: (message: string, type?: 'success' | 'error') => void;
+  initialStep?: 'choice' | 'request-link';
 }
 
 export function AddChoiceModal({
@@ -19,17 +20,20 @@ export function AddChoiceModal({
   onChooseCreateOwn,
   onCreateInvite,
   onNotify,
+  initialStep = 'choice',
 }: AddChoiceModalProps) {
   const [step, setStep] = useState<'choice' | 'request-link'>('choice');
   const [generatedLink, setGeneratedLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
+  const hasOpenedDirectRequest = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
       setStep('choice');
       setGeneratedLink('');
       setCopied(false);
+      hasOpenedDirectRequest.current = false;
       return;
     }
     const handleKey = (e: KeyboardEvent) => {
@@ -38,8 +42,6 @@ export function AddChoiceModal({
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const handleSelectRequestLink = async () => {
     setCopied(false);
@@ -55,6 +57,14 @@ export function AddChoiceModal({
     finally { setIsCreatingLink(false); }
   };
 
+  useEffect(() => {
+    if (!isOpen || initialStep !== 'request-link' || hasOpenedDirectRequest.current) return;
+    hasOpenedDirectRequest.current = true;
+    setCopied(false);
+    setStep('request-link');
+    void handleCreateLink();
+  }, [handleCreateLink, initialStep, isOpen]);
+
   const handleCopyLink = async () => {
     if (!generatedLink) return;
     try { await navigator.clipboard.writeText(generatedLink); }
@@ -63,6 +73,8 @@ export function AddChoiceModal({
     onNotify?.('Enlace copiado al portapapeles.', 'success');
     setTimeout(() => setCopied(false), 3000);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

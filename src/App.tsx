@@ -76,6 +76,7 @@ export default function App() {
 
   // Modales auxiliares
   const [isAddChoiceOpen, setIsAddChoiceOpen] = useState(false);
+  const [addChoiceInitialStep, setAddChoiceInitialStep] = useState<'choice' | 'request-link'>('choice');
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
@@ -86,6 +87,11 @@ export default function App() {
     message: string;
     type: 'success' | 'error';
   } | null>(null);
+
+  const openRequestLinkDialog = () => {
+    setAddChoiceInitialStep('request-link');
+    setIsAddChoiceOpen(true);
+  };
 
   useEffect(() => {
     if (!firebaseAuth) {
@@ -511,7 +517,7 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsAddChoiceOpen(true)}
+                    onClick={openRequestLinkDialog}
                     className="w-full min-h-[52px] px-4 py-3 rounded-full border-2 border-[#FF4B8A] bg-[#FF4B8A] text-[#FFFFFF] font-semibold text-[14px] hover:brightness-95 transition-all active:scale-[0.98] cursor-pointer"
                   >
                     Pedir receta
@@ -562,7 +568,7 @@ export default function App() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsAddChoiceOpen(true)}
+                      onClick={openRequestLinkDialog}
                       className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#FFFFFF] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all cursor-pointer"
                     >
                       Pedir receta
@@ -688,7 +694,7 @@ export default function App() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setIsAddChoiceOpen(true)}
+                    onClick={openRequestLinkDialog}
                     className="shrink-0 min-h-[48px] px-5 py-3 rounded-full bg-[#FF4B8A] text-[#FFFFFF] font-semibold text-[14px] hover:brightness-95 active:scale-[0.98] transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Pedir una receta
@@ -1012,7 +1018,11 @@ export default function App() {
       {/* Ventana de elección desde el botón (+) */}
       <AddChoiceModal
         isOpen={isAddChoiceOpen}
-        onClose={() => setIsAddChoiceOpen(false)}
+        initialStep={addChoiceInitialStep}
+        onClose={() => {
+          setIsAddChoiceOpen(false);
+          setAddChoiceInitialStep('choice');
+        }}
         onChooseCreateOwn={() => openCreateRecipePage(null)}
         onCreateInvite={async () => {
           if (!authenticatedUser) throw new Error('Iniciá sesión para crear un enlace.');
