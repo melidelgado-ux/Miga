@@ -279,14 +279,19 @@ export async function saveRecipe(uid: string, recipe: Recipe, isNew: boolean) {
       code: 'recipe-not-found',
     });
   }
+  const originalCreatedAt = existingRecipe.data().createdAt;
 
   const createdAtDate = new Date(recipe.createdAt);
   try {
     await setDoc(recipeRef, {
       ...base,
-      createdAt: Number.isNaN(createdAtDate.getTime())
-        ? serverTimestamp()
-        : Timestamp.fromDate(createdAtDate),
+      // Preserve Firestore's original precision so the immutable timestamp rule
+      // can compare it exactly. ISO strings only retain millisecond precision.
+      createdAt: originalCreatedAt instanceof Timestamp
+        ? originalCreatedAt
+        : Number.isNaN(createdAtDate.getTime())
+          ? serverTimestamp()
+          : Timestamp.fromDate(createdAtDate),
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -387,9 +392,20 @@ export async function submitInvitedRecipe(
   const database = requireDb();
   const inviteRef = doc(database, 'users', ownerUid, 'invitations', inviteId);
   const recipeRef = doc(collection(database, 'users', ownerUid, 'recipes'));
-  const inviteSnapshot = await getDoc(inviteRef);
+  let inviteSnapshot;
+  try {
+    inviteSnapshot = await getDoc(inviteRef);
+  } catch (error) {
+    const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : 'unknown';
+    throw Object.assign(new Error(`No se pudo validar el enlace de invitación (${code}).`), {
+      code: `invitation-read-${code}`,
+    });
+  }
   if (!inviteSnapshot.exists()) throw new Error('Este enlace no es válido.');
   const invite = inviteSnapshot.data();
+  if (invite.ownerUid !== ownerUid) throw new Error('Este enlace no corresponde a la cuenta que lo creó.');
   const expiresAt = invite.expiresAt instanceof Timestamp
     ? invite.expiresAt.toDate().getTime()
     : 0;
@@ -405,11 +421,27 @@ export async function submitInvitedRecipe(
     invitationId: inviteId,
     createdAt: new Date().toISOString(),
   };
-  await setDoc(recipeRef, {
-    ...definedFields(recipeFields(savedRecipe) as Record<string, unknown>),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  const fields = definedFields(recipeFields(savedRecipe) as Record<string, unknown>);
+  const issues = recipeRuleIssues(fields as Record<string, unknown>);
+  if (issues.length > 0) {
+    throw Object.assign(new Error(`Revisá ${issues.join('; ')} antes de enviar la receta.`), {
+      code: 'recipe-validation',
+    });
+  }
+  try {
+    await setDoc(recipeRef, {
+      ...fields,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : 'unknown';
+    throw Object.assign(new Error(`Firebase rechazó el envío de la receta (${code}).`), {
+      code: `guest-recipe-write-${code}`,
+    });
+  }
 
   return {
     ...recipe,
