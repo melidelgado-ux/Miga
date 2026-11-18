@@ -264,14 +264,39 @@ export async function saveRecipe(uid: string, recipe: Recipe, isNew: boolean) {
     return;
   }
 
+  let existingRecipe;
+  try {
+    existingRecipe = await getDoc(recipeRef);
+  } catch (error) {
+    const errorCode = typeof error === 'object' && error !== null && 'code' in error &&
+      typeof error.code === 'string' ? error.code : 'unknown';
+    throw Object.assign(new Error(`No se pudo verificar el acceso a la receta (${errorCode}).`), {
+      code: `recipe-read-${errorCode}`,
+    });
+  }
+  if (!existingRecipe.exists()) {
+    throw Object.assign(new Error('La receta ya no existe en esta biblioteca. Recargá la página e intentá de nuevo.'), {
+      code: 'recipe-not-found',
+    });
+  }
+
   const createdAtDate = new Date(recipe.createdAt);
-  await setDoc(recipeRef, {
-    ...base,
-    createdAt: Number.isNaN(createdAtDate.getTime())
-      ? serverTimestamp()
-      : Timestamp.fromDate(createdAtDate),
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    await setDoc(recipeRef, {
+      ...base,
+      createdAt: Number.isNaN(createdAtDate.getTime())
+        ? serverTimestamp()
+        : Timestamp.fromDate(createdAtDate),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'permission-denied') {
+      throw Object.assign(new Error('Firebase permitió leer esta receta, pero rechazó la escritura (permission-denied).'), {
+        code: 'recipe-write-permission-denied',
+      });
+    }
+    throw error;
+  }
 }
 
 export async function deleteRecipe(uid: string, recipeId: string) {

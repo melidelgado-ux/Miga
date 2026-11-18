@@ -183,7 +183,9 @@ export default function App() {
           ? error.code
           : '';
       setFeedback({
-        message: code === 'recipe-validation' && error instanceof Error
+        message: (code === 'recipe-validation' || code === 'recipe-not-found' ||
+          code === 'recipe-write-permission-denied' || code.startsWith('recipe-read-')) &&
+          error instanceof Error
           ? error.message
           : code
           ? `Error de Firebase: ${code}. No se pudo guardar la receta.`
