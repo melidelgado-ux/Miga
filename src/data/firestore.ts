@@ -193,16 +193,14 @@ export async function saveRecipe(uid: string, recipe: Recipe, isNew: boolean) {
     return;
   }
 
-  const update = {
+  const createdAtDate = new Date(recipe.createdAt);
+  await setDoc(recipeRef, {
     ...base,
-    imageUrl: recipe.imageUrl ?? deleteField(),
-    migaTip: recipe.migaTip ?? deleteField(),
-    collectionId: recipe.collectionId ?? deleteField(),
-    senderName: recipe.senderName ?? deleteField(),
-    invitationId: recipe.invitationId ?? deleteField(),
+    createdAt: Number.isNaN(createdAtDate.getTime())
+      ? serverTimestamp()
+      : Timestamp.fromDate(createdAtDate),
     updatedAt: serverTimestamp(),
-  };
-  await updateDoc(recipeRef, update);
+  });
 }
 
 export async function deleteRecipe(uid: string, recipeId: string) {
