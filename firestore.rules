@@ -176,6 +176,25 @@ service cloud.firestore {
     function validOwnerRecipeUpdate(data) {
       return validRecipePayload(data);
     }
+    function validGuestRecipe(data) {
+      return data.keys().hasOnly(['title','description','prepMinutes','servings','difficulty','category','author','featured','migaTip','imageUrl','ingredients','steps','origin','senderName','collectionId','invitationId','createdAt','updatedAt'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 500
+        && data.description is string && data.description.size() <= 10000
+        && data.prepMinutes is int && data.prepMinutes >= 0 && data.prepMinutes <= 100000
+        && data.servings is int && data.servings >= 1 && data.servings <= 10000
+        && data.difficulty in ['Fácil','Moderado','Difícil']
+        && data.category is string && data.category.size() <= 200
+        && data.author is string && data.author.size() <= 500
+        && data.featured == false
+        && (!('migaTip' in data) || (data.migaTip is string && data.migaTip.size() <= 10000))
+        && data.ingredients is list && data.ingredients.size() <= 20
+        && data.steps is list && data.steps.size() <= 20
+        && data.origin == 'received'
+        && (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 500))
+        && (!('collectionId' in data) || (data.collectionId is string && data.collectionId.size() <= 150))
+        && data.invitationId is string && data.invitationId.size() > 0 && data.invitationId.size() <= 150
+        && data.createdAt is timestamp && data.updatedAt is timestamp && validImage(data);
+    }
     function validCollection(data) {
       return data.keys().hasOnly(['name','description','pastelBg','createdAt','updatedAt'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 80
@@ -189,13 +208,9 @@ service cloud.firestore {
       match /recipes/{recipeId} {
         allow read: if signedInAs(uid);
         allow create: if (signedInAs(uid) && validRecipePayload(request.resource.data))
-          || (validRecipePayload(request.resource.data)
-            && request.resource.data.origin == 'received'
-            && request.resource.data.featured == false
-            && request.resource.data.invitationId is string
-            && request.resource.data.invitationId.size() > 0
-            // A link document can only exist under this UID because its creation is owner-only.
+          || (validGuestRecipe(request.resource.data)
             && exists(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId))
+            && get(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.ownerUid == uid
             && get(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.expiresAt is timestamp
             && get(/databases/$(database)/documents/users/$(uid)/invitations/$(request.resource.data.invitationId)).data.expiresAt > request.time);
         // Only the owner can update recipes in their private library. The app writes
