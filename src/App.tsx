@@ -355,9 +355,19 @@ export default function App() {
                 type="button"
                 onClick={() => setIsProfileOpen(true)}
                 aria-label={`Abrir perfil de ${userFirstName}`}
-                className="min-h-[44px] min-w-[44px] rounded-full bg-[#FFD6C9] border-2 border-[#FF6B4A]/60 text-[#2D2D2D] flex items-center justify-center hover:border-[#FF6B4A] transition-colors cursor-pointer"
+                className="w-11 h-11 rounded-full overflow-hidden bg-[#FFD6C9] border-2 border-[#FF6B4A]/60 text-[#2D2D2D] flex items-center justify-center hover:border-[#FF6B4A] transition-colors cursor-pointer"
               >
-                <User className="w-5 h-5" strokeWidth={2} />
+                {authenticatedUser?.photoURL ? (
+                  <img
+                    src={authenticatedUser.photoURL}
+                    alt=""
+                    aria-hidden="true"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-5 h-5" strokeWidth={2} />
+                )}
               </button>
             </div>
           )}
